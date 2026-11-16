@@ -53,11 +53,22 @@
       <div class="coloring-layout">
         <!-- Colonne Outils & Modèles -->
         <aside class="left-sidebar">
+          <button class="pick-drawing-btn" id="openPickerBtn">
+            <span class="pdb-icon">📚</span>
+            <span class="pdb-text">Dessins</span>
+          </button>
+
+          <div class="mode-row">
+            <button class="mode-btn active" data-play="free"><span>🎨</span>Libre</button>
+            <button class="mode-btn" data-play="num"><span>🔢</span>Numéros</button>
+            <button class="mode-btn" data-play="calc"><span>➕</span>Calculs</button>
+          </div>
+
           <div class="section-label">Mes Outils</div>
           <div class="tool-grid">
             <button class="tool-btn active" data-tool="fill">
               <span class="tool-icon">🪣</span>
-              <span class="tool-name">Pot Magique</span>
+              <span class="tool-name">Pot</span>
             </button>
             <button class="tool-btn" data-tool="brush">
               <span class="tool-icon">🖌️</span>
@@ -65,11 +76,7 @@
             </button>
             <button class="tool-btn" data-tool="magicreveal">
               <span class="tool-icon">🪄</span>
-              <span class="tool-name">Vraie Couleur</span>
-            </button>
-            <button class="tool-btn" data-tool="rainbow">
-              <span class="tool-icon">🌈</span>
-              <span class="tool-name">Arc-en-ciel</span>
+              <span class="tool-name">Baguette</span>
             </button>
             <button class="tool-btn" data-tool="stamp">
               <span class="tool-icon">⭐</span>
@@ -81,7 +88,18 @@
             </button>
           </div>
 
-          <div class="section-label">Taille du trait</div>
+          <div class="section-label">Motifs du pot</div>
+          <div class="pattern-row">
+            <button class="pattern-btn active" data-pattern="none" title="Uni"><span class="pat pat-none"></span></button>
+            <button class="pattern-btn" data-pattern="dots" title="Pois"><span class="pat pat-dots"></span></button>
+            <button class="pattern-btn" data-pattern="stripes" title="Rayures"><span class="pat pat-stripes"></span></button>
+            <button class="pattern-btn" data-pattern="stars" title="Étoiles"><span class="pat pat-stars">★</span></button>
+            <button class="pattern-btn" data-pattern="hearts" title="Cœurs"><span class="pat pat-hearts">♥</span></button>
+            <button class="pattern-btn" data-pattern="gradient" title="Dégradé"><span class="pat pat-gradient"></span></button>
+            <button class="pattern-btn" data-pattern="glitter" title="Paillettes"><span class="pat pat-glitter">✨</span></button>
+          </div>
+
+          <div class="section-label">Taille du pinceau</div>
           <div class="size-row">
             <button class="size-btn" data-size="12" title="Petit">
               <span class="size-dot" style="width: 10px; height: 10px;"></span>
@@ -94,18 +112,16 @@
             </button>
           </div>
 
+          <button class="guard-btn on" id="guardBtn">
+            🛡️ Sans déborder : <span class="guard-state">OUI</span>
+          </button>
+
           <!-- Tiroir de Tampons Magiques -->
           <div class="sticker-drawer" id="stickerDrawer">
             <div class="section-label">Choisis ton tampon</div>
             <div class="sticker-grid" id="stickerGrid">
               <!-- Généré par JS -->
             </div>
-          </div>
-
-          <div class="section-label">Personnages & Dinos</div>
-          <input type="file" id="customImageInput" accept="image/*" style="display:none;" />
-          <div class="template-grid" id="templateGrid">
-            <!-- Généré par JS -->
           </div>
         </aside>
 
@@ -114,11 +130,16 @@
           <div class="canvas-wrapper" id="canvasWrapper">
             <canvas id="paintCanvas" width="900" height="650"></canvas>
 
+            <div class="page-title-chip" id="currentPageName">Coloriage</div>
+            <div class="progress-pill" id="progressPill"></div>
+
             <!-- Carte Modèle Couleur en haut à gauche (cliquable pour agrandir) -->
             <div class="model-preview-card" id="modelPreviewCard" title="Touche pour agrandir ou réduire le modèle">
               <img id="modelPreviewImg" src="" alt="Modèle couleur" />
               <span>👀 Modèle (Toucher)</span>
             </div>
+
+            <button class="zoom-reset" id="zoomResetBtn">🔍 Vue entière</button>
 
             <div class="canvas-floating-actions">
               <button class="action-pill pill-undo" id="undoBtn" title="Annuler le dernier geste">
@@ -136,7 +157,7 @@
 
         <!-- Palette de Couleurs -->
         <aside class="palette-bar">
-          <div class="section-label">Couleurs</div>
+          <div class="section-label" id="paletteLabel">Couleurs</div>
           <div class="color-swatches" id="colorSwatches">
             <!-- Généré par JS -->
           </div>
@@ -258,9 +279,43 @@
       </div>
     </section>
 
+    <!-- Choix du dessin -->
+    <div class="picker-overlay" id="pickerOverlay">
+      <div class="picker-panel">
+        <div class="picker-head">
+          <div class="picker-title">📚 Choisis ton dessin !</div>
+          <div class="picker-head-right">
+            <span class="picker-stars" id="pickerStars"></span>
+            <button class="picker-print" id="printBtn" title="Imprimer le dessin ouvert, sans couleurs">🖨️ Imprimer</button>
+            <button class="picker-close" id="pickerClose" aria-label="Fermer">✖</button>
+          </div>
+        </div>
+        <div class="picker-cats" id="pickerCats"></div>
+        <div class="picker-grid" id="pickerGrid"></div>
+      </div>
+    </div>
+
+    <!-- Fête quand le coloriage est fini -->
+    <div class="celebrate-overlay" id="celebrateOverlay">
+      <div class="confetti-rain"></div>
+      <div class="celebrate-card">
+        <div class="celebrate-stars">⭐⭐⭐⭐⭐</div>
+        <div class="celebrate-title">Bravo Manel !</div>
+        <div class="celebrate-text">Ton coloriage est magnifique !</div>
+        <div class="celebrate-extra" id="celebrateExtra"></div>
+        <div class="celebrate-actions">
+          <button class="action-pill pill-save" id="celebrateSave">📸 Garder dans mon album</button>
+          <button class="action-pill pill-undo" id="celebrateClose">🎨 Continuer</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast-msg" id="toastMsg">Bravo ! 🌟</div>
   </div>
 
+  <div id="printSheet"><img id="printImg" alt="" /></div>
+
+  <script src="coloriages.js"></script>
   <script src="characters-data.js"></script>
   <script src="app.js"></script>
 </body>

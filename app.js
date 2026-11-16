@@ -18,8 +18,10 @@
     isRainbowColor: false,
     brushSize: 26,
     currentSticker: '🦖',
-    currentTemplate: 'stitch',
-    isPhotoTemplate: true,
+    pattern: 'none', // 'none' | 'dots' | 'stripes' | 'stars' | 'hearts'
+    guard: true, // le pinceau ne déborde pas de la zone
+    playMode: 'free', // 'free' | 'num' (numéros) | 'calc' (calculs)
+    numSel: 1,
     rainbowHue: 0,
     undoStack: [],
     // Monde Magique
@@ -46,14 +48,14 @@
     { hex: '#facc15', name: 'Jaune Soleil' },
     { hex: '#84cc16', name: 'Vert Pomme' },
     { hex: '#22c55e', name: 'Vert' },
-    { hex: '#14b8a6', name: 'Turquoise Jasmine' },
-    { hex: '#38bdf8', name: 'Bleu Stitch' },
+    { hex: '#14b8a6', name: 'Turquoise' },
+    { hex: '#38bdf8', name: 'Bleu Ciel' },
     { hex: '#2563eb', name: 'Bleu Roi' },
-    { hex: '#8b5cf6', name: 'Violet Raiponce' },
+    { hex: '#8b5cf6', name: 'Violet' },
     { hex: '#d946ef', name: 'Rose Magique' },
     { hex: '#f43f5e', name: 'Rose Corail' },
-    { hex: '#fdba74', name: 'Beige Peau Douce' },
-    { hex: '#a16207', name: 'Marron Lion' },
+    { hex: '#fdba74', name: 'Beige' },
+    { hex: '#a16207', name: 'Marron' },
     { hex: '#475569', name: 'Gris / Noir' },
     { hex: '#ffffff', name: 'Blanc Nuage' }
   ];
@@ -63,30 +65,6 @@
     '🌺', '👑', '⭐', '🌈',
     '🏰', '❄️', '💎', '💖',
     '🪄', '🦁', '🧞', '🌴'
-  ];
-
-  // Les 14 personnages envoyés + les 5 Dinos/Magie + Toile Libre
-  const TEMPLATES = [
-    { id: 'stitch', name: 'Stitch', imgKey: 'stitch' },
-    { id: 'vaiana', name: 'Vaiana', imgKey: 'vaiana' },
-    { id: 'maui', name: 'Maui', imgKey: 'maui' },
-    { id: 'olaf', name: 'Olaf', imgKey: 'olaf' },
-    { id: 'raiponce', name: 'Raiponce', imgKey: 'raiponce' },
-    { id: 'mickey', name: 'Mickey', imgKey: 'mickey' },
-    { id: 'winnie', name: 'Winnie', imgKey: 'winnie' },
-    { id: 'bob', name: 'Bob', imgKey: 'bob' },
-    { id: 'simba_nala', name: 'Simba & Nala', imgKey: 'simba_nala' },
-    { id: 'roi_lion', name: 'Roi Lion', imgKey: 'roi_lion' },
-    { id: 'timon_pumbaa', name: 'Timon & Pumbaa', imgKey: 'timon_pumbaa' },
-    { id: 'jasmine', name: 'Jasmine', imgKey: 'jasmine' },
-    { id: 'aladdin', name: 'Aladdin', imgKey: 'aladdin' },
-    { id: 'jasmine_portrait', name: 'Princesse Jasmine', imgKey: 'jasmine_portrait' },
-    { id: 'trex', name: 'Rexy Dino', emoji: '🦖' },
-    { id: 'unicorn', name: 'Licorne', emoji: '🦄' },
-    { id: 'diplo', name: 'Grand Diplo', emoji: '🦕' },
-    { id: 'dragon', name: 'Petit Dragon', emoji: '🐉' },
-    { id: 'tricera', name: 'Tricéra Fée', emoji: '🍄' },
-    { id: 'blank', name: 'Toile Libre', emoji: '📄' }
   ];
 
   const WORLD_ITEMS = [
@@ -319,8 +297,8 @@
 
   document.getElementById('voiceHelpBtn').addEventListener('pointerdown', () => {
     if (state.mode === 'coloring') {
-      speak('Choisis ton personnage à gauche ! Utilise le pot magique pour remplir une zone, ou la baguette Vraie Couleur pour révéler les couleurs du dessin animé !');
-      showToast('🗣️ Utilise le Pot 🪣 ou la Baguette 🪄 !');
+      speak(state.playMode === 'free' ? 'Touche le bouton Dessins pour choisir ton coloriage. Choisis une couleur à droite, puis touche une zone avec le pot magique. Avec deux doigts, tu peux agrandir le dessin.' : 'Choisis un numéro à droite, puis touche les zones qui ont le même numéro.');
+      showToast('🗣️ Choisis un dessin, une couleur, puis touche une zone !');
     } else if (state.mode === 'world') {
       speak('Touche tes héros ou les dinosaures en bas pour les ajouter dans ton monde, et fais-les danser !');
       showToast('🗣️ Touche un héros en bas pour l’ajouter !');
@@ -356,32 +334,125 @@
   });
 
   // ==========================================================================
-  // 3. MODE 1 : COLORIAGE & DESSIN MAGIQUE (Héros Photo + Dinos Vectoriels)
+  // 3. MODE 1 : COLORIAGE (dessins au trait, zones, numéros, sauvegarde)
   // ==========================================================================
+  const W = 900;
+  const H = 650;
+  const N = W * H;
+  const LINE_RGB = [30, 27, 75];
+
+  const PAGES = window.COLORING_PAGES || [];
+  const CATS = window.COLORING_CATEGORIES || [];
+  const DONE_KEY = 'manel_coloriages_finis_v1';
+  const STARTED_KEY = 'manel_coloriages_commences_v1';
+  const LAST_KEY = 'manel_dernier_dessin_v1';
+  const MODE_KEY = 'manel_mode_jeu_v1';
+
+  // Déblocage : les premiers dessins sont ouverts, chaque dessin fini en ouvre d'autres
+  const FREE_PAGES = 8;
+  const PAGES_PER_DONE = 2;
+
+  // --- Mémoire de la tablette (IndexedDB) : dessins en cours et autocollants ---
+  const Store = (() => {
+    let dbPromise = null;
+    function db() {
+      if (!dbPromise) {
+        dbPromise = new Promise((resolve, reject) => {
+          try {
+            const rq = indexedDB.open('manel_coloriage', 1);
+            rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+            rq.onsuccess = () => resolve(rq.result);
+            rq.onerror = () => reject(rq.error);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+      return dbPromise;
+    }
+    const run = (mode, fn) =>
+      db()
+        .then((d) => new Promise((resolve, reject) => {
+          const rq = fn(d.transaction('kv', mode).objectStore('kv'));
+          rq.onsuccess = () => resolve(rq.result);
+          rq.onerror = () => reject(rq.error);
+        }))
+        .catch(() => undefined);
+    return {
+      get: (k) => run('readonly', (s) => s.get(k)),
+      set: (k, v) => run('readwrite', (s) => s.put(v, k)),
+      del: (k) => run('readwrite', (s) => s.delete(k))
+    };
+  })();
+
+  function readSet(key) {
+    try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch (_) { return new Set(); }
+  }
+  function writeSet(key, set) {
+    try { localStorage.setItem(key, JSON.stringify([...set])); } catch (_) {}
+  }
+
   const paintCanvas = document.getElementById('paintCanvas');
   const ctx = paintCanvas.getContext('2d', { willReadFrequently: true });
 
-  // Calque des contours noirs du coloriage
-  const lineCanvas = document.createElement('canvas');
-  lineCanvas.width = paintCanvas.width;
-  lineCanvas.height = paintCanvas.height;
-  const lineCtx = lineCanvas.getContext('2d', { willReadFrequently: true });
+  function makeLayer() {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    return [c, c.getContext('2d', { willReadFrequently: true })];
+  }
 
-  // Calque de couleur de l'enfant (sous les traits noirs)
-  const colorCanvas = document.createElement('canvas');
-  colorCanvas.width = paintCanvas.width;
-  colorCanvas.height = paintCanvas.height;
-  const colorCtx = colorCanvas.getContext('2d', { willReadFrequently: true });
+  const [lineCanvas, lineCtx] = makeLayer();   // traits noirs (transparents ailleurs)
+  const [colorCanvas, colorCtx] = makeLayer(); // couleurs de l'enfant
+  const [refCanvas, refCtx] = makeLayer();     // modèle en couleurs
+  const [maskCanvas, maskCtx] = makeLayer();   // zone autorisée pour le pinceau
+  const [strokeCanvas, strokeCtx] = makeLayer();
 
-  // Calque de référence contenant l'image couleur originale du personnage
-  // (utilisé pour guider intelligemment le Pot Magique et la Baguette Vraie Couleur !)
-  const refCanvas = document.createElement('canvas');
-  refCanvas.width = paintCanvas.width;
-  refCanvas.height = paintCanvas.height;
-  const refCtx = refCanvas.getContext('2d', { willReadFrequently: true });
+  // --- Taille de la feuille + zoom à deux doigts ---
+  const canvasWrapper = document.getElementById('canvasWrapper');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
+  const view = { s: 1, tx: 0, ty: 0, w: W, h: H };
+
+  function applyView() {
+    view.s = Math.max(1, Math.min(4, view.s));
+    view.tx = Math.min(0, Math.max(-(view.s - 1) * view.w, view.tx));
+    view.ty = Math.min(0, Math.max(-(view.s - 1) * view.h, view.ty));
+    paintCanvas.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.s})`;
+    zoomResetBtn.classList.toggle('visible', view.s > 1.02);
+  }
+
+  function resetView() {
+    view.s = 1;
+    view.tx = 0;
+    view.ty = 0;
+    applyView();
+  }
+
+  function fitCanvas() {
+    const r = canvasWrapper.getBoundingClientRect();
+    const availW = r.width - 16;
+    const availH = r.height - 16;
+    if (availW <= 0 || availH <= 0) return;
+    const sc = Math.min(availW / W, availH / H);
+    view.w = Math.floor(W * sc);
+    view.h = Math.floor(H * sc);
+    paintCanvas.style.width = `${view.w}px`;
+    paintCanvas.style.height = `${view.h}px`;
+    resetView();
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvasWrapper);
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
+
+  zoomResetBtn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    resetView();
+    playSoundEffect('pop');
+  });
 
   const modelPreviewCard = document.getElementById('modelPreviewCard');
   const modelPreviewImg = document.getElementById('modelPreviewImg');
+  const progressPill = document.getElementById('progressPill');
 
   modelPreviewCard.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
@@ -389,19 +460,35 @@
     playSoundEffect('pop');
   });
 
+  // Zones fermées de la page : labels[p] > 0 = numéro de zone, 0 = trait
+  let zones = null;
+  let currentPage = null;
+  let celebrated = false;
+  const pageMemory = {};
+
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  function numberMode() {
+    return state.playMode !== 'free' && zones && zones.numColors.length > 0;
+  }
+
   function compositeCanvas() {
-    ctx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+    ctx.clearRect(0, 0, W, H);
     ctx.drawImage(colorCanvas, 0, 0);
-    if (state.currentTemplate !== 'blank') {
-      ctx.drawImage(lineCanvas, 0, 0);
-    }
+    if (currentPage && currentPage.kind !== 'blank') ctx.drawImage(lineCanvas, 0, 0);
+    if (numberMode()) drawNumbers();
   }
 
   function saveUndoState() {
-    if (state.undoStack.length >= 12) {
-      state.undoStack.shift();
-    }
-    state.undoStack.push(colorCtx.getImageData(0, 0, colorCanvas.width, colorCanvas.height));
+    if (state.undoStack.length >= 15) state.undoStack.shift();
+    state.undoStack.push(colorCtx.getImageData(0, 0, W, H));
   }
 
   function restoreUndoState() {
@@ -409,528 +496,276 @@
       showToast('Rien à annuler !');
       return;
     }
-    const prev = state.undoStack.pop();
-    colorCtx.putImageData(prev, 0, 0);
+    colorCtx.putImageData(state.undoStack.pop(), 0, 0);
+    refreshNumDone();
     compositeCanvas();
     playSoundEffect('undo');
     showToast('↩️ Oups annulé !');
+    scheduleProgress();
   }
 
-  // --- Conversion Intelligente d'une Image de Personnage en Page de Coloriage ---
-  function convertRefCanvasToColoringLines() {
-    const w = refCanvas.width;
-    const h = refCanvas.height;
-    const src = refCtx.getImageData(0, 0, w, h).data;
-    const outImg = lineCtx.createImageData(w, h);
-    const dst = outImg.data;
+  function whitePaper() {
+    colorCtx.fillStyle = '#ffffff';
+    colorCtx.fillRect(0, 0, W, H);
+  }
 
-    // Détection de contours multi-canal (Sobel R, G, B + Luminance)
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const idx = (y * w + x) * 4;
+  // --- Dessin au trait (SVG blanc) -> calque de traits transparent ---
+  function imageToLines(img) {
+    const [, tc] = makeLayer();
+    tc.fillStyle = '#ffffff';
+    tc.fillRect(0, 0, W, H);
+    tc.drawImage(img, 0, 0, W, H);
+    const d = tc.getImageData(0, 0, W, H).data;
+    const out = lineCtx.createImageData(W, H);
+    const o = out.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      o[i] = LINE_RGB[0];
+      o[i + 1] = LINE_RGB[1];
+      o[i + 2] = LINE_RGB[2];
+      o[i + 3] = Math.max(0, Math.min(255, (255 - lum) * 1.3));
+    }
+    lineCtx.putImageData(out, 0, 0);
+  }
 
-        const tl = ((y - 1) * w + (x - 1)) * 4;
-        const tc = ((y - 1) * w + x) * 4;
-        const tr = ((y - 1) * w + (x + 1)) * 4;
-        const ml = (y * w + (x - 1)) * 4;
-        const mr = (y * w + (x + 1)) * 4;
-        const bl = ((y + 1) * w + (x - 1)) * 4;
-        const bc = ((y + 1) * w + x) * 4;
-        const br = ((y + 1) * w + (x + 1)) * 4;
+  // --- Repérage des zones fermées (une seule fois par dessin) ---
+  function computeZones() {
+    const a = lineCtx.getImageData(0, 0, W, H).data;
+    const labels = new Int32Array(N);
+    for (let p = 0; p < N; p++) labels[p] = a[p * 4 + 3] < 110 ? -1 : 0;
 
-        let maxGrad = 0;
-        for (let c = 0; c < 3; c++) {
-          const gx =
-            -src[tl + c] + src[tr + c] -
-            2 * src[ml + c] + 2 * src[mr + c] -
-            src[bl + c] + src[br + c];
-          const gy =
-            -src[tl + c] - 2 * src[tc + c] - src[tr + c] +
-            src[bl + c] + 2 * src[bc + c] + src[br + c];
-          const g = Math.sqrt(gx * gx + gy * gy);
-          if (g > maxGrad) maxGrad = g;
-        }
+    const sizes = [0];
+    const stack = new Int32Array(N);
+    let next = 1;
+    for (let p = 0; p < N; p++) {
+      if (labels[p] !== -1) continue;
+      let sp = 0;
+      let size = 0;
+      stack[sp++] = p;
+      labels[p] = next;
+      while (sp) {
+        const q = stack[--sp];
+        size++;
+        const x = q % W;
+        if (x > 0 && labels[q - 1] === -1) { labels[q - 1] = next; stack[sp++] = q - 1; }
+        if (x < W - 1 && labels[q + 1] === -1) { labels[q + 1] = next; stack[sp++] = q + 1; }
+        if (q >= W && labels[q - W] === -1) { labels[q - W] = next; stack[sp++] = q - W; }
+        if (q < N - W && labels[q + W] === -1) { labels[q + W] = next; stack[sp++] = q + W; }
+      }
+      sizes.push(size);
+      next++;
+    }
 
-        const r = src[idx];
-        const g = src[idx + 1];
-        const b = src[idx + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Les pixels du trait sont rattachés à la zone voisine : la couleur passe
+    // sous le trait, sans liseré blanc.
+    const owner = new Int32Array(N);
+    let frontier = [];
+    for (let p = 0; p < N; p++) {
+      if (labels[p] !== 0) continue;
+      const x = p % W;
+      const n =
+        (x > 0 && labels[p - 1] > 0 && labels[p - 1]) ||
+        (x < W - 1 && labels[p + 1] > 0 && labels[p + 1]) ||
+        (p >= W && labels[p - W] > 0 && labels[p - W]) ||
+        (p < N - W && labels[p + W] > 0 && labels[p + W]) || 0;
+      if (n) { owner[p] = n; frontier.push(p); }
+    }
+    for (let step = 0; step < 6 && frontier.length; step++) {
+      const nf = [];
+      for (const p of frontier) {
+        const x = p % W;
+        const L = owner[p];
+        const tryPx = (q) => {
+          if (labels[q] === 0 && owner[q] === 0) { owner[q] = L; nf.push(q); }
+        };
+        if (x > 0) tryPx(p - 1);
+        if (x < W - 1) tryPx(p + 1);
+        if (p >= W) tryPx(p - W);
+        if (p < N - W) tryPx(p + W);
+      }
+      frontier = nf;
+    }
 
-        let lineAlpha = 0;
+    // Zones qui comptent pour la progression (on ignore les miettes et le fond)
+    const big = [];
+    let largest = 0;
+    for (let L = 1; L < sizes.length; L++) {
+      if (sizes[L] >= 350) big.push(L);
+      if (sizes[L] > sizes[largest]) largest = L;
+    }
+    zones = {
+      labels, owner, sizes, largest,
+      big: big.filter((L) => L !== largest),
+      touched: new Uint8Array(sizes.length)
+    };
+    computeNumbers();
+  }
 
-        // 1. Traits noirs existants dans le dessin animé (ex: yeux, sourire, contours de Stitch/Mickey)
-        if (lum < 62) {
-          lineAlpha = Math.max(lineAlpha, Math.min(255, (68 - lum) * 4.2));
-        }
+  // --- Coloriage par numéros : centre, couleur du modèle et numéro de chaque zone ---
+  function computeNumbers() {
+    const { labels, sizes, largest } = zones;
+    const len = sizes.length;
+    const ref = refCtx.getImageData(0, 0, W, H).data;
 
-        // 2. Contours entre deux zones de couleurs (ex: robe de Raiponce, chemise de Winnie, Vaiana)
-        if (maxGrad > 42) {
-          const edgeAlpha = Math.min(255, (maxGrad - 32) * 2.2);
-          if (edgeAlpha > lineAlpha) lineAlpha = edgeAlpha;
-        }
+    // Distance au trait le plus proche (pour placer le numéro au milieu de la zone)
+    const dist = new Uint16Array(N);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const p = y * W + x;
+        if (labels[p] <= 0) continue;
+        if (x === 0 || y === 0) { dist[p] = 1; continue; }
+        dist[p] = Math.min(dist[p - 1], dist[p - W]) + 1;
+      }
+    }
+    for (let y = H - 1; y >= 0; y--) {
+      for (let x = W - 1; x >= 0; x--) {
+        const p = y * W + x;
+        if (labels[p] <= 0) continue;
+        if (x === W - 1 || y === H - 1) { dist[p] = 1; continue; }
+        const m = Math.min(dist[p + 1], dist[p + W]) + 1;
+        if (m < dist[p]) dist[p] = m;
+      }
+    }
+    const best = new Uint16Array(len);
+    const bestP = new Int32Array(len);
+    for (let p = 0; p < N; p++) {
+      const L = labels[p];
+      if (L > 0 && dist[p] > best[L]) { best[L] = dist[p]; bestP[L] = p; }
+    }
+    // Recentrer : moyenne des points les plus "au milieu"
+    const sx = new Float64Array(len);
+    const sy = new Float64Array(len);
+    const sn = new Int32Array(len);
+    for (let p = 0; p < N; p++) {
+      const L = labels[p];
+      if (L > 0 && dist[p] >= best[L] * 0.82) { sx[L] += p % W; sy[L] += (p / W) | 0; sn[L]++; }
+    }
+    for (let L = 1; L < len; L++) {
+      if (!sn[L]) continue;
+      const q = Math.round(sy[L] / sn[L]) * W + Math.round(sx[L] / sn[L]);
+      if (labels[q] === L && dist[q] >= best[L] * 0.7) { bestP[L] = q; best[L] = dist[q]; }
+    }
 
-        if (lineAlpha > 20) {
-          dst[idx] = 30;     // #1e1b4b
-          dst[idx + 1] = 27;
-          dst[idx + 2] = 75;
-          dst[idx + 3] = Math.round(lineAlpha);
+    const modelRgb = new Uint8Array(len * 3).fill(255);
+    const num = new Uint8Array(len);
+    const auto = new Uint8Array(len);
+    const numColors = [];
+    const index = new Map();
+    for (let L = 1; L < len; L++) {
+      const i = bestP[L] * 4;
+      const r = ref[i], g = ref[i + 1], b = ref[i + 2];
+      if (L === largest || Math.min(r, g, b) > 232) continue; // fond et zones blanches
+      modelRgb[L * 3] = r; modelRgb[L * 3 + 1] = g; modelRgb[L * 3 + 2] = b;
+      if (sizes[L] < 350 || best[L] < 9) { auto[L] = 1; continue; } // trop petit pour un numéro
+      const key = (r << 16) | (g << 8) | b;
+      if (!index.has(key)) { index.set(key, numColors.length); numColors.push([r, g, b]); }
+      num[L] = index.get(key) + 1;
+    }
+    Object.assign(zones, { center: bestP, radius: best, modelRgb, num, auto, numColors, done: new Uint8Array(len) });
+  }
+
+  function refreshNumDone() {
+    if (!zones || !zones.numColors.length) return;
+    const d = colorCtx.getImageData(0, 0, W, H).data;
+    const { num, center, numColors, done } = zones;
+    for (let L = 1; L < num.length; L++) {
+      if (!num[L]) continue;
+      const c = numColors[num[L] - 1];
+      const i = center[L] * 4;
+      done[L] = Math.abs(d[i] - c[0]) + Math.abs(d[i + 1] - c[1]) + Math.abs(d[i + 2] - c[2]) < 12 ? 1 : 0;
+    }
+  }
+
+  function calcText(n, L) {
+    const h = (L * 2654435761) >>> 0;
+    if (n >= 2 && (h & 1)) {
+      const a = 1 + ((h >>> 3) % (n - 1));
+      return `${a}+${n - a}`;
+    }
+    const b = 1 + ((h >>> 5) % 4);
+    return `${n + b}-${b}`;
+  }
+
+  function drawNumbers() {
+    const { num, center, radius, done } = zones;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = '#1e1b4b';
+    for (let L = 1; L < num.length; L++) {
+      if (!num[L] || done[L]) continue;
+      const r = radius[L];
+      let text = String(num[L]);
+      let size = Math.min(38, r * (text.length > 1 ? 0.95 : 1.2));
+      if (state.playMode === 'calc' && r >= 19) {
+        text = calcText(num[L], L);
+        size = Math.min(28, r * (text.length > 3 ? 0.62 : 0.72));
+      }
+      size = Math.max(12, size);
+      ctx.font = `900 ${size}px "Segoe UI", system-ui, sans-serif`;
+      ctx.lineWidth = Math.max(3, size / 5);
+      const x = center[L] % W;
+      const y = ((center[L] / W) | 0) + 1;
+      ctx.strokeText(text, x, y);
+      ctx.fillText(text, x, y);
+    }
+    ctx.restore();
+  }
+
+  function zoneAt(x, y) {
+    if (!zones) return 0;
+    x = Math.max(0, Math.min(W - 1, Math.floor(x)));
+    y = Math.max(0, Math.min(H - 1, Math.floor(y)));
+    const p = y * W + x;
+    if (zones.labels[p] > 0) return zones.labels[p];
+    // L'enfant a touché un trait : on prend la zone la plus proche
+    for (let r = 1; r <= 14; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+          const L = zones.labels[yy * W + xx];
+          if (L > 0 && zones.sizes[L] > 30) return L;
         }
       }
     }
-
-    lineCtx.putImageData(outImg, 0, 0);
-    // Cadre propre autour de la feuille
-    lineCtx.strokeStyle = '#1e1b4b';
-    lineCtx.lineWidth = 6;
-    lineCtx.strokeRect(3, 3, w - 6, h - 6);
+    return 0;
   }
 
-  function loadCharacterImageTemplate(dataUrl, label) {
-    state.isPhotoTemplate = true;
-    state.undoStack = [];
-
-    const img = new Image();
-    img.onload = () => {
-      // 1. Dessiner le personnage bien centré sur fond blanc dans refCanvas
-      refCtx.fillStyle = '#ffffff';
-      refCtx.fillRect(0, 0, refCanvas.width, refCanvas.height);
-
-      const pad = 28;
-      const availW = refCanvas.width - pad * 2;
-      const availH = refCanvas.height - pad * 2;
-      const scale = Math.min(availW / img.width, availH / img.height);
-      const drawW = img.width * scale;
-      const drawH = img.height * scale;
-      const dx = (refCanvas.width - drawW) / 2;
-      const dy = (refCanvas.height - drawH) / 2;
-
-      refCtx.drawImage(img, dx, dy, drawW, drawH);
-
-      // 2. Extraire automatiquement les contours de coloriage dans lineCanvas
-      convertRefCanvasToColoringLines();
-
-      // 3. Initialiser la feuille de coloriage en blanc
-      colorCtx.fillStyle = '#ffffff';
-      colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
-
-      // 4. Afficher la miniature du Modèle Couleur en haut à gauche
-      modelPreviewImg.src = dataUrl;
-      modelPreviewCard.classList.add('visible');
-      modelPreviewCard.classList.remove('zoomed');
-
-      compositeCanvas();
-    };
-    img.src = dataUrl;
-    if (label) {
-      showToast(`🎨 Coloriage : ${label} !`);
+  // --- Motifs du pot (pois, rayures, étoiles, cœurs, dégradé, paillettes) ---
+  const TILE = 44;
+  const TILE_PATTERNS = new Set(['dots', 'stripes', 'stars', 'hearts']);
+  function makePatternTile(rgb, pattern) {
+    const t = document.createElement('canvas');
+    t.width = TILE;
+    t.height = TILE;
+    const c = t.getContext('2d', { willReadFrequently: true });
+    c.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    c.fillRect(0, 0, TILE, TILE);
+    c.fillStyle = 'rgba(255,255,255,0.85)';
+    c.strokeStyle = 'rgba(255,255,255,0.85)';
+    if (pattern === 'dots') {
+      [[11, 11], [33, 33]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 6, 0, Math.PI * 2); c.fill(); });
+    } else if (pattern === 'stripes') {
+      c.lineWidth = 8;
+      for (let k = -TILE; k <= TILE * 2; k += 22) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k - TILE, TILE); c.stroke(); }
+    } else {
+      c.font = '18px sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      const ch = pattern === 'stars' ? '★' : '♥';
+      c.fillText(ch, 11, 12);
+      c.fillText(ch, 33, 34);
     }
+    return c.getImageData(0, 0, TILE, TILE).data;
   }
 
-  // --- Dessin des 5 Modèles Vectoriels Dinos & Magie ---
-  function drawTemplateLines(templateId) {
-    lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-    if (templateId === 'blank') return;
-
-    lineCtx.strokeStyle = '#1e1b4b';
-    lineCtx.fillStyle = '#1e1b4b';
-    lineCtx.lineWidth = 7;
-    lineCtx.lineCap = 'round';
-    lineCtx.lineJoin = 'round';
-
-    lineCtx.strokeRect(3, 3, lineCanvas.width - 6, lineCanvas.height - 6);
-
-    if (templateId === 'trex') {
-      drawTrexTemplate(lineCtx);
-    } else if (templateId === 'unicorn') {
-      drawUnicornTemplate(lineCtx);
-    } else if (templateId === 'diplo') {
-      drawDiploTemplate(lineCtx);
-    } else if (templateId === 'dragon') {
-      drawDragonTemplate(lineCtx);
-    } else if (templateId === 'tricera') {
-      drawTriceraTemplate(lineCtx);
-    }
-  }
-
-  function drawCloud(c, x, y, scale = 1) {
-    c.save();
-    c.translate(x, y);
-    c.scale(scale, scale);
-    c.beginPath();
-    c.moveTo(-60, 20);
-    c.quadraticCurveTo(-75, -10, -40, -15);
-    c.quadraticCurveTo(-25, -45, 10, -30);
-    c.quadraticCurveTo(45, -45, 60, -10);
-    c.quadraticCurveTo(85, -5, 70, 20);
-    c.closePath();
-    c.stroke();
-    c.restore();
-  }
-
-  function drawStarShape(c, cx, cy, spikes, outerR, innerR) {
-    let rot = (Math.PI / 2) * 3;
-    let x = cx;
-    let y = cy;
-    const step = Math.PI / spikes;
-    c.beginPath();
-    c.moveTo(cx, cy - outerR);
-    for (let i = 0; i < spikes; i++) {
-      x = cx + Math.cos(rot) * outerR;
-      y = cy + Math.sin(rot) * outerR;
-      c.lineTo(x, y);
-      rot += step;
-      x = cx + Math.cos(rot) * innerR;
-      y = cy + Math.sin(rot) * innerR;
-      c.lineTo(x, y);
-      rot += step;
-    }
-    c.lineTo(cx, cy - outerR);
-    c.closePath();
-    c.stroke();
-  }
-
-  function drawTrexTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 520);
-    c.quadraticCurveTo(450, 480, 897, 530);
-    c.stroke();
-
-    c.beginPath();
-    c.arc(110, 105, 55, 0, Math.PI * 2);
-    c.stroke();
-
-    drawCloud(c, 420, 95, 1.0);
-
-    c.beginPath();
-    c.moveTo(590, 512);
-    c.lineTo(665, 290);
-    c.lineTo(795, 290);
-    c.lineTo(870, 528);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(665, 290);
-    c.quadraticCurveTo(680, 360, 700, 355);
-    c.quadraticCurveTo(730, 315, 745, 370);
-    c.quadraticCurveTo(775, 370, 795, 290);
-    c.closePath();
-    c.stroke();
-
-    drawCloud(c, 730, 210, 0.95);
-
-    c.beginPath();
-    c.moveTo(190, 440);
-    c.quadraticCurveTo(70, 410, 65, 340);
-    c.quadraticCurveTo(100, 350, 200, 370);
-    c.quadraticCurveTo(210, 250, 260, 210);
-    c.quadraticCurveTo(240, 120, 330, 115);
-    c.lineTo(465, 125);
-    c.quadraticCurveTo(510, 135, 500, 195);
-    c.quadraticCurveTo(495, 240, 400, 245);
-    c.quadraticCurveTo(455, 310, 435, 425);
-    c.lineTo(445, 505);
-    c.lineTo(375, 505);
-    c.lineTo(370, 445);
-    c.lineTo(310, 445);
-    c.lineTo(305, 505);
-    c.lineTo(235, 505);
-    c.lineTo(235, 440);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(395, 250);
-    c.quadraticCurveTo(335, 310, 350, 425);
-    c.quadraticCurveTo(435, 420, 435, 340);
-    c.closePath();
-    c.stroke();
-    c.beginPath();
-    c.moveTo(352, 310); c.lineTo(432, 310);
-    c.moveTo(348, 365); c.lineTo(436, 365);
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(385, 285);
-    c.quadraticCurveTo(445, 285, 440, 315);
-    c.quadraticCurveTo(400, 325, 375, 310);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(295, 118);
-    c.lineTo(285, 55);
-    c.lineTo(330, 88);
-    c.lineTo(360, 45);
-    c.lineTo(390, 88);
-    c.lineTo(430, 55);
-    c.lineTo(415, 120);
-    c.closePath();
-    c.stroke();
-
-    const spikes = [
-      [[248, 220], [205, 195], [228, 260]],
-      [[225, 270], [175, 255], [208, 320]],
-      [[205, 330], [155, 320], [195, 370]]
-    ];
-    spikes.forEach((pts) => {
-      c.beginPath();
-      c.moveTo(pts[0][0], pts[0][1]);
-      c.lineTo(pts[1][0], pts[1][1]);
-      c.lineTo(pts[2][0], pts[2][1]);
-      c.closePath();
-      c.stroke();
-    });
-
-    c.beginPath();
-    c.arc(365, 160, 22, 0, Math.PI * 2);
-    c.stroke();
-    c.beginPath();
-    c.arc(372, 160, 9, 0, Math.PI * 2);
-    c.fill();
-
-    c.beginPath();
-    c.moveTo(390, 205);
-    c.quadraticCurveTo(445, 220, 485, 195);
-    c.stroke();
-  }
-
-  function drawUnicornTemplate(c) {
-    const radii = [380, 340, 300, 260];
-    radii.forEach((r) => {
-      c.beginPath();
-      c.arc(450, 560, r, Math.PI, 0, false);
-      c.stroke();
-    });
-
-    drawCloud(c, 140, 535, 1.35);
-    drawCloud(c, 760, 535, 1.35);
-
-    c.beginPath();
-    c.moveTo(3, 560);
-    c.lineTo(897, 560);
-    c.stroke();
-
-    drawStarShape(c, 150, 120, 5, 42, 20);
-    drawStarShape(c, 760, 120, 5, 42, 20);
-    drawStarShape(c, 450, 85, 5, 34, 16);
-
-    c.beginPath();
-    c.moveTo(350, 330);
-    c.quadraticCurveTo(310, 390, 330, 450);
-    c.lineTo(320, 545);
-    c.lineTo(365, 545);
-    c.lineTo(375, 460);
-    c.lineTo(505, 460);
-    c.lineTo(515, 545);
-    c.lineTo(565, 545);
-    c.lineTo(565, 430);
-    c.quadraticCurveTo(590, 355, 525, 335);
-    c.lineTo(410, 335);
-    c.lineTo(385, 225);
-    c.quadraticCurveTo(375, 175, 325, 185);
-    c.quadraticCurveTo(255, 200, 255, 245);
-    c.quadraticCurveTo(260, 285, 320, 280);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(295, 195);
-    c.lineTo(220, 95);
-    c.lineTo(335, 182);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(430, 355);
-    c.quadraticCurveTo(450, 230, 565, 235);
-    c.quadraticCurveTo(555, 290, 520, 300);
-    c.quadraticCurveTo(560, 320, 510, 355);
-    c.quadraticCurveTo(475, 380, 430, 355);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.arc(315, 230, 14, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function drawDiploTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 520);
-    c.quadraticCurveTo(300, 460, 600, 510);
-    c.quadraticCurveTo(760, 535, 897, 495);
-    c.stroke();
-
-    c.beginPath();
-    c.arc(780, 110, 58, 0, Math.PI * 2);
-    c.stroke();
-
-    drawCloud(c, 520, 100, 1.05);
-
-    c.beginPath();
-    c.moveTo(335, 130);
-    c.quadraticCurveTo(420, 120, 425, 175);
-    c.quadraticCurveTo(425, 215, 355, 205);
-    c.quadraticCurveTo(340, 320, 385, 375);
-    c.lineTo(385, 515);
-    c.lineTo(320, 515);
-    c.lineTo(315, 435);
-    c.lineTo(215, 435);
-    c.lineTo(210, 515);
-    c.lineTo(145, 515);
-    c.lineTo(145, 415);
-    c.quadraticCurveTo(60, 415, 45, 335);
-    c.quadraticCurveTo(95, 355, 155, 345);
-    c.quadraticCurveTo(215, 265, 285, 330);
-    c.quadraticCurveTo(280, 200, 295, 145);
-    c.quadraticCurveTo(305, 130, 335, 130);
-    c.closePath();
-    c.stroke();
-
-    [[215, 345, 28], [265, 375, 22], [175, 380, 18]].forEach(([x, y, r]) => {
-      c.beginPath();
-      c.arc(x, y, r, 0, Math.PI * 2);
-      c.stroke();
-    });
-
-    c.beginPath();
-    c.arc(360, 160, 12, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function drawDragonTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 525);
-    c.lineTo(897, 525);
-    c.stroke();
-
-    c.beginPath();
-    c.rect(75, 260, 130, 265);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(60, 260);
-    c.lineTo(140, 130);
-    c.lineTo(220, 260);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(410, 300);
-    c.lineTo(275, 195);
-    c.lineTo(255, 315);
-    c.quadraticCurveTo(315, 295, 340, 345);
-    c.quadraticCurveTo(375, 320, 410, 350);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(525, 300);
-    c.lineTo(665, 195);
-    c.lineTo(685, 315);
-    c.quadraticCurveTo(625, 295, 595, 345);
-    c.quadraticCurveTo(560, 320, 525, 350);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.ellipse(470, 395, 85, 120, 0, 0, Math.PI * 2);
-    c.stroke();
-
-    c.beginPath();
-    c.ellipse(470, 410, 52, 90, 0, 0, Math.PI * 2);
-    c.stroke();
-
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.arc(470, 225, 72, 0, Math.PI * 2);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#1e1b4b';
-
-    c.beginPath();
-    c.arc(442, 215, 11, 0, Math.PI * 2);
-    c.arc(498, 215, 11, 0, Math.PI * 2);
-    c.fill();
-
-    drawStarShape(c, 640, 105, 5, 38, 18);
-  }
-
-  function drawTriceraTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 525);
-    c.quadraticCurveTo(450, 495, 897, 525);
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(115, 520);
-    c.lineTo(130, 350);
-    c.lineTo(190, 350);
-    c.lineTo(205, 520);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(55, 355);
-    c.quadraticCurveTo(160, 195, 265, 355);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.arc(465, 275, 115, Math.PI * 0.75, Math.PI * 2.15, false);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(530, 330);
-    c.quadraticCurveTo(720, 310, 745, 420);
-    c.lineTo(795, 445);
-    c.lineTo(735, 465);
-    c.lineTo(730, 515);
-    c.lineTo(670, 515);
-    c.lineTo(665, 465);
-    c.lineTo(555, 465);
-    c.lineTo(550, 515);
-    c.lineTo(490, 515);
-    c.lineTo(485, 420);
-    c.closePath();
-    c.stroke();
-
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.ellipse(435, 315, 85, 65, 0, 0, Math.PI * 2);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#1e1b4b';
-
-    c.beginPath();
-    c.arc(415, 305, 12, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function loadTemplate(tpl) {
-    state.currentTemplate = tpl.id;
-    state.undoStack = [];
-
-    if (tpl.imgKey && CHAR_IMGS[tpl.imgKey]) {
-      loadCharacterImageTemplate(CHAR_IMGS[tpl.imgKey], tpl.name);
-      return;
-    }
-
-    state.isPhotoTemplate = false;
-    modelPreviewCard.classList.remove('visible');
-
-    colorCtx.fillStyle = '#ffffff';
-    colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
-
-    drawTemplateLines(tpl.id);
-    compositeCanvas();
-  }
-
-  // --- Algorithme Pot Magique Guidé (Fonctionne sur les 14 Héros Photo ET les Dinos !) ---
   function hexToRgba(hex) {
-    const clean = hex.replace('#', '');
-    const num = parseInt(clean, 16);
+    const num = parseInt(hex.replace('#', ''), 16);
     return [(num >> 16) & 255, (num >> 8) & 255, num & 255, 255];
   }
 
@@ -943,253 +778,402 @@
     return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4)), 255];
   }
 
-  function floodFillAt(startX, startY) {
-    const w = colorCanvas.width;
-    const h = colorCanvas.height;
-    startX = Math.max(0, Math.min(w - 1, Math.floor(startX)));
-    startY = Math.max(0, Math.min(h - 1, Math.floor(startY)));
-
-    const lineData = lineCtx.getImageData(0, 0, w, h).data;
-    const colorImg = colorCtx.getImageData(0, 0, w, h);
-    const data = colorImg.data;
-    const refData = state.isPhotoTemplate ? refCtx.getImageData(0, 0, w, h).data : null;
-
-    const startIdx = (startY * w + startX) * 4;
-    if (state.currentTemplate !== 'blank' && lineData[startIdx + 3] > 210) {
-      return false;
-    }
-
-    let fillRgba;
+  function currentRgb() {
     if (state.isRainbowColor) {
-      state.rainbowHue = (state.rainbowHue + 45) % 360;
-      fillRgba = hslToRgb(state.rainbowHue, 90, 60);
-    } else {
-      fillRgba = hexToRgba(state.currentColor);
+      state.rainbowHue = (state.rainbowHue + 47) % 360;
+      return hslToRgb(state.rainbowHue, 90, 60);
     }
+    return hexToRgba(state.currentColor);
+  }
 
-    const targetR = data[startIdx];
-    const targetG = data[startIdx + 1];
-    const targetB = data[startIdx + 2];
+  // Peint toutes les zones cochées dans sel[]. mode 'model' = couleur du modèle.
+  function paintZones(sel, mode, rgb) {
+    const img = colorCtx.getImageData(0, 0, W, H);
+    const d = img.data;
+    const { labels, owner, modelRgb } = zones;
+    const pat = mode === 'model' ? 'none' : state.pattern;
+    const tile = TILE_PATTERNS.has(pat) ? makePatternTile(rgb, pat) : null;
 
-    const refR0 = refData ? refData[startIdx] : 0;
-    const refG0 = refData ? refData[startIdx + 1] : 0;
-    const refB0 = refData ? refData[startIdx + 2] : 0;
-
-    if (
-      Math.abs(targetR - fillRgba[0]) < 8 &&
-      Math.abs(targetG - fillRgba[1]) < 8 &&
-      Math.abs(targetB - fillRgba[2]) < 8
-    ) {
-      return false;
+    let y0 = H;
+    let y1 = 0;
+    if (pat === 'gradient') {
+      for (let p = 0; p < N; p++) {
+        if (sel[labels[p] || owner[p]]) {
+          const y = (p / W) | 0;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
     }
+    const span = Math.max(1, y1 - y0);
 
+    for (let p = 0; p < N; p++) {
+      const L = labels[p] || owner[p];
+      if (!sel[L]) continue;
+      const i = p * 4;
+      const x = p % W;
+      const y = (p / W) | 0;
+      let r, g, b;
+      if (mode === 'model') {
+        r = modelRgb[L * 3]; g = modelRgb[L * 3 + 1]; b = modelRgb[L * 3 + 2];
+      } else if (tile) {
+        const t = ((y % TILE) * TILE + (x % TILE)) * 4;
+        r = tile[t]; g = tile[t + 1]; b = tile[t + 2];
+      } else if (pat === 'gradient') {
+        const k = 0.72 * (1 - (y - y0) / span);
+        r = rgb[0] + (255 - rgb[0]) * k; g = rgb[1] + (255 - rgb[1]) * k; b = rgb[2] + (255 - rgb[2]) * k;
+      } else if (pat === 'glitter') {
+        let h = Math.imul(x >> 1, 73856093) ^ Math.imul(y >> 1, 19349663);
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        const v = ((h ^ (h >>> 16)) >>> 0) % 100;
+        const k = v < 7 ? 0.9 : v < 15 ? 0.5 : v < 21 ? -0.22 : 0;
+        if (k >= 0) { r = rgb[0] + (255 - rgb[0]) * k; g = rgb[1] + (255 - rgb[1]) * k; b = rgb[2] + (255 - rgb[2]) * k; }
+        else { r = rgb[0] * (1 + k); g = rgb[1] * (1 + k); b = rgb[2] * (1 + k); }
+      } else {
+        r = rgb[0]; g = rgb[1]; b = rgb[2];
+      }
+      d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255;
+    }
+    colorCtx.putImageData(img, 0, 0);
+  }
+
+  // --- Pot magique : remplit toute la zone touchée ---
+  function fillZone(L, mode) {
+    if (!L) return false;
     saveUndoState();
-
-    const visited = new Uint8Array(w * h);
-    const stack = [startX, startY];
-    const hasLines = state.currentTemplate !== 'blank';
-
-    function canFill(px, py) {
-      if (px < 0 || px >= w || py < 0 || py >= h) return false;
-      const pIdx = py * w + px;
-      if (visited[pIdx]) return false;
-      const idx4 = pIdx * 4;
-      if (hasLines && lineData[idx4 + 3] > 185) return false;
-
-      // Vérifier la cohérence sur colorCanvas
-      const dr = Math.abs(data[idx4] - targetR);
-      const dg = Math.abs(data[idx4 + 1] - targetG);
-      const db = Math.abs(data[idx4 + 2] - targetB);
-      if (dr + dg + db > 75) return false;
-
-      // Si c'est une image de personnage, guider le remplissage grâce aux zones de couleur de l'image originale !
-      if (refData) {
-        const rdr = Math.abs(refData[idx4] - refR0);
-        const rdg = Math.abs(refData[idx4 + 1] - refG0);
-        const rdb = Math.abs(refData[idx4 + 2] - refB0);
-        if (rdr + rdg + rdb > 120) return false;
-      }
-
-      return true;
-    }
-
-    while (stack.length > 0) {
-      const y = stack.pop();
-      const x = stack.pop();
-      let lx = x;
-
-      while (lx >= 0 && canFill(lx, y)) lx--;
-      lx++;
-
-      let rx = x;
-      while (rx < w && canFill(rx, y)) rx++;
-      rx--;
-
-      let spanAbove = false;
-      let spanBelow = false;
-
-      for (let ix = lx; ix <= rx; ix++) {
-        const pIdx = y * w + ix;
-        visited[pIdx] = 1;
-        const idx4 = pIdx * 4;
-        data[idx4] = fillRgba[0];
-        data[idx4 + 1] = fillRgba[1];
-        data[idx4 + 2] = fillRgba[2];
-        data[idx4 + 3] = 255;
-
-        if (y > 0) {
-          if (!spanAbove && canFill(ix, y - 1)) {
-            stack.push(ix, y - 1);
-            spanAbove = true;
-          } else if (spanAbove && !canFill(ix, y - 1)) {
-            spanAbove = false;
-          }
-        }
-        if (y < h - 1) {
-          if (!spanBelow && canFill(ix, y + 1)) {
-            stack.push(ix, y + 1);
-            spanBelow = true;
-          } else if (spanBelow && !canFill(ix, y + 1)) {
-            spanBelow = false;
-          }
-        }
-      }
-    }
-
-    // Dilatation de 1 pixel sous les contours pour un rendu net sans bord blanc
-    if (hasLines) {
-      for (let y = 1; y < h - 1; y++) {
-        for (let x = 1; x < w - 1; x++) {
-          const pIdx = y * w + x;
-          if (!visited[pIdx]) {
-            if (visited[pIdx - 1] || visited[pIdx + 1] || visited[pIdx - w] || visited[pIdx + w]) {
-              const idx4 = pIdx * 4;
-              data[idx4] = fillRgba[0];
-              data[idx4 + 1] = fillRgba[1];
-              data[idx4 + 2] = fillRgba[2];
-              data[idx4 + 3] = 255;
-            }
-          }
-        }
-      }
-    }
-
-    colorCtx.putImageData(colorImg, 0, 0);
+    const sel = new Uint8Array(zones.sizes.length);
+    sel[L] = 1;
+    paintZones(sel, mode, mode === 'model' ? null : currentRgb());
+    zones.touched[L] = 1;
+    refreshNumDone();
     compositeCanvas();
+    scheduleProgress();
     return true;
   }
 
-  // --- Interactions Tactiles sur la Toile ---
-  let isDrawing = false;
-  let lastPt = null;
-
-  function getCanvasCoords(e) {
-    const rect = paintCanvas.getBoundingClientRect();
-    const scaleX = paintCanvas.width / rect.width;
-    const scaleY = paintCanvas.height / rect.height;
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-      screenX: e.clientX,
-      screenY: e.clientY
-    };
-  }
-
-  paintCanvas.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    paintCanvas.setPointerCapture(e.pointerId);
-    const pt = getCanvasCoords(e);
-
-    if (state.currentTool === 'fill') {
-      const filled = floodFillAt(pt.x, pt.y);
-      if (filled) {
-        playSoundEffect('fill');
-        spawnFloatingBurst(pt.screenX, pt.screenY, ['✨', '🌟', '🎨']);
-      } else {
-        playSoundEffect('pop');
-      }
-      return;
-    }
-
-    if (state.currentTool === 'stamp') {
-      saveUndoState();
-      colorCtx.save();
-      colorCtx.font = `${state.brushSize * 2.2 + 28}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
-      colorCtx.textAlign = 'center';
-      colorCtx.textBaseline = 'middle';
-      colorCtx.fillText(state.currentSticker, pt.x, pt.y);
-      colorCtx.restore();
-      compositeCanvas();
-      playSoundEffect('chime');
-      spawnFloatingBurst(pt.screenX, pt.screenY, [state.currentSticker, '✨', '⭐']);
-      return;
-    }
-
+  // Page blanche : remplissage simple de la tache de couleur touchée
+  function floodFillBlank(sx, sy) {
+    sx = Math.max(0, Math.min(W - 1, Math.floor(sx)));
+    sy = Math.max(0, Math.min(H - 1, Math.floor(sy)));
+    const img = colorCtx.getImageData(0, 0, W, H);
+    const d = img.data;
+    const s = (sy * W + sx) * 4;
+    const tr = d[s], tg = d[s + 1], tb = d[s + 2];
+    const rgb = currentRgb();
+    if (Math.abs(tr - rgb[0]) + Math.abs(tg - rgb[1]) + Math.abs(tb - rgb[2]) < 12) return false;
     saveUndoState();
-    isDrawing = true;
-    lastPt = pt;
-    drawStrokeStep(pt, pt);
-  });
-
-  paintCanvas.addEventListener('pointermove', (e) => {
-    if (!isDrawing) return;
-    e.preventDefault();
-    const pt = getCanvasCoords(e);
-    drawStrokeStep(lastPt, pt);
-    lastPt = pt;
-  });
-
-  function stopDrawing() {
-    isDrawing = false;
-    lastPt = null;
+    const seen = new Uint8Array(N);
+    const stack = [sy * W + sx];
+    while (stack.length) {
+      const p = stack.pop();
+      if (seen[p]) continue;
+      seen[p] = 1;
+      const i = p * 4;
+      if (Math.abs(d[i] - tr) + Math.abs(d[i + 1] - tg) + Math.abs(d[i + 2] - tb) > 90) continue;
+      d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = 255;
+      const x = p % W;
+      if (x > 0) stack.push(p - 1);
+      if (x < W - 1) stack.push(p + 1);
+      if (p >= W) stack.push(p - W);
+      if (p < N - W) stack.push(p + W);
+    }
+    colorCtx.putImageData(img, 0, 0);
+    compositeCanvas();
+    scheduleProgress();
+    return true;
   }
 
-  paintCanvas.addEventListener('pointerup', stopDrawing);
-  paintCanvas.addEventListener('pointercancel', stopDrawing);
+  // --- Sauvegarde automatique du dessin en cours ---
+  let saveTimer = null;
+  let dirty = false;
 
-  function drawStrokeStep(from, to) {
-    colorCtx.save();
-    colorCtx.lineCap = 'round';
-    colorCtx.lineJoin = 'round';
-    colorCtx.lineWidth = state.brushSize;
+  function scheduleSave() {
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 700);
+  }
 
-    if (state.currentTool === 'eraser') {
-      colorCtx.strokeStyle = '#ffffff';
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
-    } else if (state.currentTool === 'magicreveal' && state.isPhotoTemplate) {
-      // Baguette Magique : révèle les vraies couleurs originales du personnage sous le doigt !
-      const pattern = colorCtx.createPattern(refCanvas, 'no-repeat');
-      colorCtx.strokeStyle = pattern;
-      colorCtx.lineWidth = state.brushSize * 1.45;
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
-    } else if (state.currentTool === 'rainbow' || state.isRainbowColor || state.currentTool === 'magicreveal') {
-      state.rainbowHue = (state.rainbowHue + 7) % 360;
-      colorCtx.strokeStyle = `hsl(${state.rainbowHue}, 92%, 56%)`;
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
+  function saveNow() {
+    clearTimeout(saveTimer);
+    if (!dirty || !currentPage) return;
+    dirty = false;
+    const rec = {
+      png: colorCanvas.toDataURL('image/png'),
+      touched: zones ? Array.from(zones.touched) : null,
+      celebrated
+    };
+    pageMemory[currentPage.key] = rec;
+    Store.set(`page:${currentPage.key}`, rec);
+    const started = readSet(STARTED_KEY);
+    started.add(currentPage.key);
+    writeSet(STARTED_KEY, started);
+  }
+
+  window.addEventListener('pagehide', saveNow);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+
+  // --- Progression et fête quand le dessin est fini ---
+  let progressTimer = null;
+  function scheduleProgress() {
+    scheduleSave();
+    clearTimeout(progressTimer);
+    progressTimer = setTimeout(updateProgress, 250);
+  }
+
+  function updateProgress() {
+    if (!zones || !zones.big.length) {
+      progressPill.classList.remove('visible');
+      return;
+    }
+    let pct;
+    let finished;
+    if (numberMode()) {
+      let total = 0;
+      let done = 0;
+      for (let L = 1; L < zones.num.length; L++) {
+        if (zones.num[L]) { total++; done += zones.done[L]; }
+      }
+      pct = total ? done / total : 0;
+      finished = done === total;
+      refreshNumberSwatches();
     } else {
-      colorCtx.strokeStyle = state.currentColor;
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
+      const d = colorCtx.getImageData(0, 0, W, H).data;
+      const counts = new Int32Array(zones.sizes.length);
+      const { labels } = zones;
+      for (let p = 0; p < N; p++) {
+        const L = labels[p];
+        if (L > 0) {
+          const i = p * 4;
+          if (d[i] < 240 || d[i + 1] < 240 || d[i + 2] < 240) counts[L]++;
+        }
+      }
+      const total = zones.big.length;
+      const done = zones.big.filter((L) => zones.touched[L] || counts[L] > zones.sizes[L] * 0.5).length;
+      pct = done / total;
+      finished = pct >= 0.85;
+    }
+    const stars = Math.round(pct * 5);
+    progressPill.innerHTML = `<span class="pp-stars">${'★'.repeat(stars)}<span class="pp-off">${'★'.repeat(5 - stars)}</span></span><span class="pp-num">${Math.round(pct * 100)} %</span>`;
+    progressPill.classList.add('visible');
+    if (finished && !celebrated) {
+      celebrated = true;
+      scheduleSave();
+      setTimeout(celebrate, 400);
+    }
+  }
+
+  // --- Déblocage des dessins ---
+  function unlockedCount(doneSet) {
+    const doneLines = LINE_PAGES.filter((p) => doneSet.has(p.key)).length;
+    return FREE_PAGES + PAGES_PER_DONE * doneLines;
+  }
+
+  // --- Autocollants : chaque dessin fini devient un personnage de « Mon Monde » ---
+  const myStickers = new Map();
+
+  function makeSticker() {
+    const c = document.createElement('canvas');
+    c.width = 360;
+    c.height = 260;
+    const cc = c.getContext('2d');
+    cc.drawImage(colorCanvas, 0, 0, 360, 260);
+    cc.drawImage(lineCanvas, 0, 0, 360, 260);
+    return c.toDataURL('image/jpeg', 0.86);
+  }
+
+  const celebrateOverlay = document.getElementById('celebrateOverlay');
+  function celebrate() {
+    const extra = [];
+    if (currentPage && currentPage.kind === 'line') {
+      const doneSet = readSet(DONE_KEY);
+      const before = unlockedCount(doneSet);
+      doneSet.add(currentPage.key);
+      writeSet(DONE_KEY, doneSet);
+      const after = unlockedCount(doneSet);
+      const fresh = LINE_PAGES.slice(before, after).map((p) => p.name);
+      if (fresh.length) extra.push(`🔓 Nouveau${fresh.length > 1 ? 'x' : ''} dessin${fresh.length > 1 ? 's' : ''} : ${fresh.join(' et ')} !`);
+
+      const url = makeSticker();
+      myStickers.set(currentPage.key, { name: currentPage.name, url });
+      Store.set(`sticker:${currentPage.key}`, url);
+      refreshStickerTray();
+      extra.push('🏰 Ton dessin est maintenant un autocollant dans Mon Monde !');
+    }
+    document.getElementById('celebrateExtra').innerHTML = extra.map((t) => `<div>${t}</div>`).join('');
+
+    playSoundEffect('magic');
+    setTimeout(() => playSoundEffect('fill'), 350);
+    speak('Bravo Manel ! Ton coloriage est magnifique !');
+    celebrateOverlay.classList.add('visible');
+    const rain = celebrateOverlay.querySelector('.confetti-rain');
+    rain.innerHTML = '';
+    const emojis = ['⭐', '🌟', '✨', '💖', '🎉', '🌈', '🦄', '🦖'];
+    for (let i = 0; i < 36; i++) {
+      const e = document.createElement('span');
+      e.textContent = emojis[i % emojis.length];
+      e.style.left = `${Math.random() * 100}%`;
+      e.style.animationDelay = `${Math.random() * 1.2}s`;
+      e.style.fontSize = `${1.4 + Math.random() * 1.6}rem`;
+      rain.appendChild(e);
+    }
+  }
+
+  function exportDrawing() {
+    const [c, cc] = makeLayer();
+    cc.drawImage(colorCanvas, 0, 0);
+    if (currentPage && currentPage.kind !== 'blank') cc.drawImage(lineCanvas, 0, 0);
+    return c.toDataURL('image/jpeg', 0.88);
+  }
+
+  document.getElementById('celebrateSave').addEventListener('pointerdown', () => {
+    saveCanvasToGallery(exportDrawing(), currentPage ? currentPage.name : 'Coloriage');
+    celebrateOverlay.classList.remove('visible');
+  });
+  document.getElementById('celebrateClose').addEventListener('pointerdown', () => {
+    celebrateOverlay.classList.remove('visible');
+    playSoundEffect('pop');
+  });
+
+  // --- Chargement d'un dessin ---
+  async function openPage(page) {
+    saveNow();
+    currentPage = page;
+    state.undoStack = [];
+    zones = null;
+    lineCtx.clearRect(0, 0, W, H);
+    progressPill.classList.remove('visible');
+    modelPreviewCard.classList.remove('visible', 'zoomed');
+    document.getElementById('currentPageName').textContent = page.name;
+    resetView();
+    try { localStorage.setItem(LAST_KEY, page.key); } catch (_) {}
+
+    if (page.kind === 'line') {
+      try {
+        const [lineImg, modelImg] = await Promise.all([loadImage(page.lineUrl), loadImage(page.modelUrl)]);
+        if (currentPage !== page) return;
+        imageToLines(lineImg);
+        refCtx.drawImage(modelImg, 0, 0, W, H);
+        modelPreviewImg.src = page.modelUrl;
+        modelPreviewCard.classList.add('visible');
+        computeZones();
+      } catch (_) {
+        showToast('Oups, ce dessin ne veut pas s’ouvrir !');
+      }
     }
 
-    colorCtx.restore();
+    const mem = pageMemory[page.key] || (await Store.get(`page:${page.key}`));
+    if (currentPage !== page) return;
+    whitePaper();
+    celebrated = false;
+    if (mem && mem.png) {
+      try {
+        const im = await loadImage(mem.png);
+        if (currentPage !== page) return;
+        colorCtx.drawImage(im, 0, 0);
+        if (zones && mem.touched) zones.touched.set(mem.touched.slice(0, zones.touched.length));
+        celebrated = !!mem.celebrated;
+        pageMemory[page.key] = mem;
+      } catch (_) {}
+    }
+
+    if (state.playMode !== 'free' && !(zones && zones.numColors.length)) setPlayMode('free', true);
+    applyPlayMode();
     compositeCanvas();
+    updateProgress();
+    if (page.speak) speak(page.speak);
   }
 
-  // --- Initialisation des contrôles du Mode Coloriage ---
-  function initColoringUI() {
-    const swatchesContainer = document.getElementById('colorSwatches');
+  // --- Modes de jeu : libre, numéros, calculs ---
+  const coloringLayout = document.querySelector('.coloring-layout');
+  const swatchesContainer = document.getElementById('colorSwatches');
+
+  function autoFillSmallZones() {
+    const d = colorCtx.getImageData(0, 0, W, H).data;
+    const sel = new Uint8Array(zones.sizes.length);
+    let any = false;
+    for (let L = 1; L < sel.length; L++) {
+      if (!zones.auto[L]) continue;
+      const i = zones.center[L] * 4;
+      if (d[i] > 240 && d[i + 1] > 240 && d[i + 2] > 240) { sel[L] = 1; any = true; }
+    }
+    if (any) {
+      paintZones(sel, 'model', null);
+      scheduleSave();
+    }
+  }
+
+  function applyPlayMode() {
+    const on = numberMode();
+    coloringLayout.classList.toggle('num-mode', on);
+    document.querySelectorAll('.mode-btn').forEach((b) => b.classList.toggle('active', b.dataset.play === state.playMode));
+    document.getElementById('paletteLabel').textContent = on ? 'Numéros' : 'Couleurs';
+    if (on) {
+      autoFillSmallZones();
+      refreshNumDone();
+      const { num, done } = zones;
+      const open = (n) => num.some((v, L) => v === n && !done[L]);
+      if (!state.numSel || state.numSel > zones.numColors.length || !open(state.numSel)) {
+        state.numSel = 1;
+        for (let n = 1; n <= zones.numColors.length; n++) { if (open(n)) { state.numSel = n; break; } }
+      }
+    }
+    renderPalette();
+  }
+
+  function setPlayMode(mode, silent) {
+    if (mode !== 'free' && !(zones && zones.numColors.length)) {
+      if (!silent) showToast('🔢 Choisis d’abord un dessin !');
+      return;
+    }
+    state.playMode = mode;
+    try { localStorage.setItem(MODE_KEY, mode); } catch (_) {}
+    applyPlayMode();
+    compositeCanvas();
+    updateProgress();
+    if (silent) return;
+    playSoundEffect('magic');
+    if (mode === 'num') {
+      speak('Choisis un numéro à droite, puis touche les zones qui ont le même numéro.');
+      showToast('🔢 Choisis un numéro, puis touche sa zone !');
+    } else if (mode === 'calc') {
+      speak('Fais le calcul dans ta tête, choisis le numéro du résultat, puis touche la zone.');
+      showToast('➕ Fais le calcul, puis choisis le résultat !');
+    } else {
+      showToast('🎨 Coloriage libre !');
+    }
+  }
+
+  function refreshNumberSwatches() {
+    if (!numberMode()) return;
+    const { num, done } = zones;
+    swatchesContainer.querySelectorAll('.num-swatch').forEach((btn) => {
+      const n = Number(btn.dataset.num);
+      const finished = !num.some((v, L) => v === n && !done[L]);
+      btn.classList.toggle('finished', finished);
+      btn.textContent = finished ? '✓' : String(n);
+      btn.classList.toggle('active', n === state.numSel);
+    });
+  }
+
+  function renderPalette() {
+    swatchesContainer.innerHTML = '';
+    if (numberMode()) {
+      zones.numColors.forEach((c, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'color-swatch num-swatch';
+        btn.dataset.num = String(idx + 1);
+        btn.style.backgroundColor = `rgb(${c[0]},${c[1]},${c[2]})`;
+        btn.style.color = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] > 150 ? '#1e1b4b' : '#ffffff';
+        btn.addEventListener('pointerdown', () => {
+          state.numSel = idx + 1;
+          refreshNumberSwatches();
+          playSoundEffect('pop');
+        });
+        swatchesContainer.appendChild(btn);
+      });
+      refreshNumberSwatches();
+      return;
+    }
     PALETTE.forEach((col) => {
       const btn = document.createElement('button');
       btn.className = 'color-swatch';
@@ -1197,11 +1181,11 @@
       if (col.hex === 'RAINBOW') {
         btn.classList.add('rainbow-swatch');
         btn.textContent = '✨';
+        if (state.isRainbowColor) btn.classList.add('active');
       } else {
         btn.style.backgroundColor = col.hex;
-        if (col.hex === state.currentColor) btn.classList.add('active');
+        if (!state.isRainbowColor && col.hex === state.currentColor) btn.classList.add('active');
       }
-
       btn.addEventListener('pointerdown', () => {
         document.querySelectorAll('.color-swatch').forEach((s) => s.classList.remove('active'));
         btn.classList.add('active');
@@ -1214,12 +1198,343 @@
           state.currentColor = col.hex;
           playSoundEffect('pop');
         }
-        if (state.currentTool === 'eraser' || state.currentTool === 'magicreveal') {
-          selectTool('fill');
-        }
+        document.querySelectorAll('.pattern-btn').forEach((b) => b.style.setProperty('--pc', state.isRainbowColor ? '#a855f7' : state.currentColor));
+        if (state.currentTool === 'eraser' || state.currentTool === 'magicreveal') selectTool('fill');
       });
-
       swatchesContainer.appendChild(btn);
+    });
+  }
+
+  function numberTap(pt) {
+    const L = zoneAt(pt.x, pt.y);
+    const n = L ? zones.num[L] : 0;
+    if (!n || zones.done[L]) {
+      playSoundEffect('pop');
+      return;
+    }
+    if (n !== state.numSel) {
+      playSoundEffect('undo');
+      showToast(state.playMode === 'calc' ? '🤔 Refais le calcul dans ta tête !' : '🤔 Regarde bien le numéro !');
+      paintCanvas.classList.remove('shake');
+      void paintCanvas.offsetWidth;
+      paintCanvas.classList.add('shake');
+      return;
+    }
+    fillZone(L, 'model');
+    playSoundEffect('fill');
+    spawnFloatingBurst(pt.screenX, pt.screenY, ['✨', '🌟', '👍']);
+    if (!zones.num.some((v, K) => v === n && !zones.done[K])) {
+      const next = zones.numColors.findIndex((_, i) => zones.num.some((v, K) => v === i + 1 && !zones.done[K]));
+      if (next >= 0) {
+        state.numSel = next + 1;
+        showToast(`👏 Le ${n} est fini ! On passe au ${next + 1}.`);
+      }
+      refreshNumberSwatches();
+    }
+  }
+
+  // --- Interactions tactiles sur la toile (1 doigt = colorier, 2 doigts = zoom) ---
+  let isDrawing = false;
+  let lastPt = null;
+  let clipActive = false;
+  const pointers = new Map();
+  let pinch = null;
+  let pendingTap = null;
+  let afterPinch = false;
+
+  function getCanvasCoords(e) {
+    const rect = paintCanvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) * W) / rect.width,
+      y: ((e.clientY - rect.top) * H) / rect.height,
+      screenX: e.clientX,
+      screenY: e.clientY
+    };
+  }
+
+  function prepareClip(pt) {
+    clipActive = false;
+    if (!zones || !state.guard) return;
+    const L = zoneAt(pt.x, pt.y);
+    if (!L) return;
+    const m = maskCtx.createImageData(W, H);
+    const md = m.data;
+    const { labels, owner } = zones;
+    for (let p = 0; p < N; p++) {
+      if (labels[p] === L || (labels[p] === 0 && owner[p] === L)) md[p * 4 + 3] = 255;
+    }
+    maskCtx.putImageData(m, 0, 0);
+    clipActive = true;
+  }
+
+  function isTapTool() {
+    const tool = state.currentTool;
+    return numberMode() || tool === 'fill' || tool === 'stamp' || (tool === 'magicreveal' && zones);
+  }
+
+  function doTap(pt) {
+    if (numberMode()) {
+      numberTap(pt);
+      return;
+    }
+    const tool = state.currentTool;
+    if (tool === 'stamp') {
+      saveUndoState();
+      colorCtx.save();
+      colorCtx.font = `${state.brushSize * 2.2 + 28}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+      colorCtx.textAlign = 'center';
+      colorCtx.textBaseline = 'middle';
+      colorCtx.fillText(state.currentSticker, pt.x, pt.y);
+      colorCtx.restore();
+      compositeCanvas();
+      scheduleProgress();
+      playSoundEffect('chime');
+      spawnFloatingBurst(pt.screenX, pt.screenY, [state.currentSticker, '✨', '⭐']);
+      return;
+    }
+    const ok = zones
+      ? fillZone(zoneAt(pt.x, pt.y), tool === 'magicreveal' ? 'model' : 'color')
+      : floodFillBlank(pt.x, pt.y);
+    if (ok) {
+      playSoundEffect(tool === 'magicreveal' ? 'magic' : 'fill');
+      spawnFloatingBurst(pt.screenX, pt.screenY, ['✨', '🌟', '🎨']);
+    } else {
+      playSoundEffect('pop');
+    }
+  }
+
+  function startPinch() {
+    // Un trait commencé par le premier doigt est annulé
+    if (isDrawing && state.undoStack.length) {
+      colorCtx.putImageData(state.undoStack.pop(), 0, 0);
+      compositeCanvas();
+    }
+    isDrawing = false;
+    lastPt = null;
+    clipActive = false;
+    pendingTap = null;
+    const [a, b] = [...pointers.values()];
+    const rect = paintCanvas.getBoundingClientRect();
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    pinch = {
+      d0: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)),
+      s0: view.s,
+      baseX: rect.left - view.tx,
+      baseY: rect.top - view.ty,
+      lx: (mx - rect.left) / view.s,
+      ly: (my - rect.top) / view.s
+    };
+  }
+
+  paintCanvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    try { paintCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {
+      startPinch();
+      return;
+    }
+    if (pointers.size > 2 || afterPinch) return;
+
+    const pt = getCanvasCoords(e);
+    if (isTapTool()) {
+      pendingTap = { id: e.pointerId, pt };
+      return;
+    }
+    saveUndoState();
+    prepareClip(pt);
+    isDrawing = true;
+    lastPt = pt;
+    drawStrokeStep(pt, pt);
+  });
+
+  paintCanvas.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pointers.size >= 2) {
+      e.preventDefault();
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      view.s = Math.max(1, Math.min(4, (pinch.s0 * d) / pinch.d0));
+      view.tx = (a.x + b.x) / 2 - pinch.baseX - view.s * pinch.lx;
+      view.ty = (a.y + b.y) / 2 - pinch.baseY - view.s * pinch.ly;
+      applyView();
+      return;
+    }
+    if (!isDrawing) return;
+    e.preventDefault();
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    for (const ev of evs.length ? evs : [e]) {
+      const pt = getCanvasCoords(ev);
+      drawStrokeStep(lastPt, pt);
+      lastPt = pt;
+    }
+  });
+
+  function endPointer(e, cancelled) {
+    pointers.delete(e.pointerId);
+    if (pinch) {
+      pinch = null;
+      afterPinch = pointers.size > 0;
+      return;
+    }
+    if (afterPinch) {
+      afterPinch = pointers.size > 0;
+      return;
+    }
+    if (pendingTap && pendingTap.id === e.pointerId) {
+      const tap = pendingTap;
+      pendingTap = null;
+      if (!cancelled) doTap(tap.pt);
+      return;
+    }
+    if (isDrawing) scheduleProgress();
+    isDrawing = false;
+    lastPt = null;
+    clipActive = false;
+  }
+
+  paintCanvas.addEventListener('pointerup', (e) => endPointer(e, false));
+  paintCanvas.addEventListener('pointercancel', (e) => endPointer(e, true));
+
+  function drawStrokeStep(from, to) {
+    let style;
+    if (state.currentTool === 'eraser') {
+      style = '#ffffff';
+    } else if (state.isRainbowColor || state.currentTool === 'magicreveal') {
+      state.rainbowHue = (state.rainbowHue + 7) % 360;
+      style = `hsl(${state.rainbowHue}, 92%, 56%)`;
+    } else {
+      style = state.currentColor;
+    }
+
+    const lw = state.brushSize;
+    const target = clipActive ? strokeCtx : colorCtx;
+    const bx = Math.max(0, Math.floor(Math.min(from.x, to.x) - lw));
+    const by = Math.max(0, Math.floor(Math.min(from.y, to.y) - lw));
+    const bw = Math.min(W - bx, Math.ceil(Math.abs(to.x - from.x) + lw * 2 + 2));
+    const bh = Math.min(H - by, Math.ceil(Math.abs(to.y - from.y) + lw * 2 + 2));
+    if (bw <= 0 || bh <= 0) return;
+    if (clipActive) strokeCtx.clearRect(bx, by, bw, bh);
+
+    target.save();
+    target.lineCap = 'round';
+    target.lineJoin = 'round';
+    target.lineWidth = lw;
+    target.strokeStyle = style;
+    target.beginPath();
+    target.moveTo(from.x, from.y);
+    target.lineTo(to.x + 0.01, to.y);
+    target.stroke();
+    target.restore();
+
+    if (clipActive) {
+      strokeCtx.globalCompositeOperation = 'destination-in';
+      strokeCtx.drawImage(maskCanvas, bx, by, bw, bh, bx, by, bw, bh);
+      strokeCtx.globalCompositeOperation = 'source-over';
+      colorCtx.drawImage(strokeCanvas, bx, by, bw, bh, bx, by, bw, bh);
+    }
+    compositeCanvas();
+  }
+
+  // --- Choix du dessin (grand écran avec miniatures) ---
+  const pickerOverlay = document.getElementById('pickerOverlay');
+  const pickerGrid = document.getElementById('pickerGrid');
+  const pickerCats = document.getElementById('pickerCats');
+  let pickerCat = 'all';
+
+  const LINE_PAGES = PAGES.map((p) => ({ ...p, key: p.id, kind: 'line', thumb: p.lineUrl }));
+  const BLANK_PAGE = { key: 'blank', name: 'Page blanche', kind: 'blank', cat: 'libre', emoji: '📄', speak: 'Page blanche, dessine ce que tu veux !' };
+  const ALL_PAGES = [...LINE_PAGES, BLANK_PAGE];
+
+  function renderPicker() {
+    const cats = [{ id: 'all', label: 'Tout', emoji: '⭐' }, ...CATS];
+    pickerCats.innerHTML = '';
+    cats.forEach((c) => {
+      const b = document.createElement('button');
+      b.className = 'picker-cat' + (c.id === pickerCat ? ' active' : '');
+      b.innerHTML = `<span>${c.emoji}</span> ${c.label}`;
+      b.addEventListener('pointerdown', () => {
+        pickerCat = c.id;
+        playSoundEffect('pop');
+        renderPicker();
+      });
+      pickerCats.appendChild(b);
+    });
+
+    const done = readSet(DONE_KEY);
+    const started = readSet(STARTED_KEY);
+    const open = unlockedCount(done);
+    const doneLines = LINE_PAGES.filter((p) => done.has(p.key)).length;
+    document.getElementById('pickerStars').textContent = `⭐ ${doneLines} / ${LINE_PAGES.length}`;
+
+    pickerGrid.innerHTML = '';
+    const list = pickerCat === 'all' ? ALL_PAGES : ALL_PAGES.filter((p) => p.cat === pickerCat);
+    list.forEach((p) => {
+      const idx = LINE_PAGES.indexOf(p);
+      const locked = idx >= open;
+      const card = document.createElement('button');
+      card.className = 'picker-card' + (currentPage && currentPage.key === p.key ? ' active' : '') + (locked ? ' locked' : '');
+      const thumb = p.thumb
+        ? `<img class="pc-thumb" src="${p.thumb}" alt="" draggable="false" />`
+        : `<div class="pc-thumb pc-emoji">${p.emoji}</div>`;
+      let badges = '';
+      let label = p.name;
+      if (locked) {
+        const need = Math.ceil((idx + 1 - FREE_PAGES) / PAGES_PER_DONE) - doneLines;
+        badges = '<span class="pc-lock">🔒</span>';
+        label = `Finis encore ${need} dessin${need > 1 ? 's' : ''}`;
+      } else {
+        if (done.has(p.key)) badges += '<span class="pc-done">⭐</span>';
+        else if (started.has(p.key)) badges += '<span class="pc-started">🖍️</span>';
+      }
+      card.innerHTML = `${thumb}${badges}<div class="pc-name">${label}</div>`;
+      card.addEventListener('pointerup', () => {
+        if (locked) {
+          playSoundEffect('undo');
+          showToast('🔒 Finis un autre dessin pour ouvrir celui-ci !');
+          return;
+        }
+        closePicker();
+        playSoundEffect('magic');
+        openPage(p);
+      });
+      pickerGrid.appendChild(card);
+    });
+  }
+
+  function openPicker() {
+    saveNow();
+    renderPicker();
+    pickerOverlay.classList.add('visible');
+    playSoundEffect('pop');
+  }
+
+  function closePicker() {
+    pickerOverlay.classList.remove('visible');
+  }
+
+  document.getElementById('openPickerBtn').addEventListener('pointerdown', openPicker);
+  document.getElementById('pickerClose').addEventListener('pointerdown', closePicker);
+
+  // --- Impression du dessin vierge (pour colorier aux feutres) ---
+  document.getElementById('printBtn').addEventListener('click', () => {
+    if (!currentPage || currentPage.kind !== 'line') {
+      showToast('🖨️ Ouvre d’abord un dessin !');
+      return;
+    }
+    const img = document.getElementById('printImg');
+    img.onload = () => window.print();
+    img.src = currentPage.lineUrl;
+    if (img.complete) window.print();
+  });
+
+  // --- Initialisation des contrôles du Mode Coloriage ---
+  function initColoringUI() {
+    renderPalette();
+
+    document.querySelectorAll('.mode-btn').forEach((btn) => {
+      btn.addEventListener('pointerdown', () => setPlayMode(btn.dataset.play));
     });
 
     document.querySelectorAll('.tool-btn').forEach((btn) => {
@@ -1227,7 +1542,9 @@
         selectTool(btn.dataset.tool);
         if (btn.dataset.tool === 'magicreveal') {
           playSoundEffect('magic');
-          showToast('🪄 Frotte le dessin avec ton doigt pour révéler ses vraies couleurs !');
+          showToast(zones ? '🪄 Touche une zone : elle prend la couleur du modèle !' : '🪄 Dessine en arc-en-ciel !');
+        } else if (btn.dataset.tool === 'brush' && zones && state.guard) {
+          showToast('🖌️ Ton pinceau ne déborde pas !');
         }
       });
     });
@@ -1240,6 +1557,31 @@
         playSoundEffect('pop');
       });
     });
+
+    document.querySelectorAll('.pattern-btn').forEach((btn) => {
+      btn.style.setProperty('--pc', state.currentColor);
+      btn.addEventListener('pointerdown', () => {
+        document.querySelectorAll('.pattern-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.pattern = btn.dataset.pattern;
+        if (state.currentTool !== 'fill') selectTool('fill');
+        playSoundEffect('pop');
+        showToast(state.pattern === 'none' ? '🪣 Couleur unie' : '✨ Le pot remplit avec un motif !');
+      });
+    });
+
+    const guardBtn = document.getElementById('guardBtn');
+    const refreshGuard = () => {
+      guardBtn.classList.toggle('on', state.guard);
+      guardBtn.querySelector('.guard-state').textContent = state.guard ? 'OUI' : 'NON';
+    };
+    guardBtn.addEventListener('pointerdown', () => {
+      state.guard = !state.guard;
+      refreshGuard();
+      playSoundEffect('pop');
+      showToast(state.guard ? '🛡️ Le pinceau reste dans la zone' : '🖌️ Le pinceau peut déborder');
+    });
+    refreshGuard();
 
     const stickerGrid = document.getElementById('stickerGrid');
     STICKERS.forEach((st, idx) => {
@@ -1255,67 +1597,47 @@
       stickerGrid.appendChild(item);
     });
 
-    // Grille des 20 modèles + bouton Importer Photo
-    const templateGrid = document.getElementById('templateGrid');
-    const customInput = document.getElementById('customImageInput');
-
-    // Bouton pour ajouter n'importe quelle nouvelle photo depuis la tablette
-    const uploadCard = document.createElement('button');
-    uploadCard.className = 'template-card';
-    uploadCard.style.borderColor = '#a855f7';
-    uploadCard.style.background = '#faf5ff';
-    uploadCard.innerHTML = `<span class="tpl-emoji">➕</span><span>Ma Photo</span>`;
-    uploadCard.addEventListener('Click', () => customInput.click());
-    uploadCard.addEventListener('pointerdown', () => customInput.click());
-    templateGrid.appendChild(uploadCard);
-
-    customInput.addEventListener('change', (ev) => {
-      const file = ev.target.files && ev.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        document.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
-        uploadCard.classList.add('active');
-        state.currentTemplate = 'custom';
-        loadCharacterImageTemplate(reader.result, 'Ma Photo');
-        playSoundEffect('magic');
-      };
-      reader.readAsDataURL(file);
-    });
-
-    TEMPLATES.forEach((tpl, idx) => {
-      const card = document.createElement('button');
-      card.className = 'template-card' + (idx === 0 ? ' active' : '');
-      if (tpl.imgKey && CHAR_IMGS[tpl.imgKey]) {
-        card.innerHTML = `<img class="tpl-thumb" src="${CHAR_IMGS[tpl.imgKey]}" alt="${tpl.name}" /><span>${tpl.name}</span>`;
-      } else {
-        card.innerHTML = `<span class="tpl-emoji">${tpl.emoji}</span><span>${tpl.name}</span>`;
-      }
-      card.addEventListener('pointerdown', () => {
-        document.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
-        card.classList.add('active');
-        loadTemplate(tpl);
-        playSoundEffect('magic');
-      });
-      templateGrid.appendChild(card);
-    });
-
     document.getElementById('undoBtn').addEventListener('pointerdown', restoreUndoState);
     document.getElementById('clearBtn').addEventListener('pointerdown', () => {
       saveUndoState();
-      colorCtx.fillStyle = '#ffffff';
-      colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
+      whitePaper();
+      celebrated = false;
+      if (zones) zones.touched.fill(0);
+      if (numberMode()) autoFillSmallZones();
+      refreshNumDone();
       compositeCanvas();
+      scheduleSave();
+      updateProgress();
+      if (currentPage) {
+        const started = readSet(STARTED_KEY);
+        started.delete(currentPage.key);
+        writeSet(STARTED_KEY, started);
+      }
       playSoundEffect('undo');
       showToast('🔄 Dessin tout propre !');
     });
     document.getElementById('saveDrawingBtn').addEventListener('pointerdown', (e) => {
-      saveCanvasToGallery(paintCanvas.toDataURL('image/png'), 'Coloriage Magique');
+      saveCanvasToGallery(exportDrawing(), currentPage ? currentPage.name : 'Coloriage');
       spawnFloatingBurst(e.clientX, e.clientY, ['📸', '🌟', '🎉', '🦖']);
     });
 
-    // Charger Stitch par défaut !
-    loadTemplate(TEMPLATES[0]);
+    // Autocollants déjà gagnés
+    const done = readSet(DONE_KEY);
+    Promise.all(LINE_PAGES.filter((p) => done.has(p.key)).map((p) =>
+      Store.get(`sticker:${p.key}`).then((url) => { if (url) myStickers.set(p.key, { name: p.name, url }); })
+    )).then(refreshStickerTray);
+
+    try {
+      const m = localStorage.getItem(MODE_KEY);
+      if (m === 'num' || m === 'calc') state.playMode = m;
+    } catch (_) {}
+
+    // On rouvre le dernier dessin ; la première fois, on propose le choix
+    let last = null;
+    try { last = localStorage.getItem(LAST_KEY); } catch (_) {}
+    const lastPage = ALL_PAGES.find((p) => p.key === last);
+    if (lastPage) openPage(lastPage);
+    else openPage(ALL_PAGES[0]).then(() => setTimeout(openPicker, 300));
   }
 
   function selectTool(toolName) {
@@ -1323,8 +1645,7 @@
     document.querySelectorAll('.tool-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.tool === toolName);
     });
-    const drawer = document.getElementById('stickerDrawer');
-    drawer.classList.toggle('visible', toolName === 'stamp');
+    document.getElementById('stickerDrawer').classList.toggle('visible', toolName === 'stamp');
     playSoundEffect('pop');
   }
 
@@ -1336,6 +1657,7 @@
 
   function initWorldUI() {
     const tray = document.getElementById('worldTray');
+    refreshStickerTray();
     WORLD_ITEMS.forEach((item) => {
       const card = document.createElement('button');
       card.className = 'spawn-card';
@@ -1391,9 +1713,29 @@
     spawnWorldActor({ emoji: '🥚', label: 'Œuf Surprise', sound: 'egg' }, 76, 72, 1.0, true);
   }
 
+  // Les coloriages finis de l'enfant, en tête du tiroir
+  function refreshStickerTray() {
+    const tray = document.getElementById('worldTray');
+    tray.querySelectorAll('.sticker-card').forEach((c) => c.remove());
+    const first = tray.firstChild;
+    myStickers.forEach((st, key) => {
+      const imgKey = `sticker-${key}`;
+      const im = new Image();
+      im.src = st.url;
+      loadedImages[imgKey] = im;
+      const card = document.createElement('button');
+      card.className = 'spawn-card sticker-card';
+      card.innerHTML = `<img class="spawn-thumb" src="${st.url}" alt="" /><span class="spawn-label">⭐ ${st.name}</span>`;
+      card.addEventListener('pointerdown', () => {
+        spawnWorldActor({ imgKey, src: st.url, label: st.name, sound: 'magic' });
+      });
+      tray.insertBefore(card, first);
+    });
+  }
+
   function spawnWorldActor(item, xPct = null, yPct = null, scale = 1, silent = false) {
     const id = 'actor_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-    const imgSrc = item.imgKey && CHAR_IMGS[item.imgKey] ? CHAR_IMGS[item.imgKey] : null;
+    const imgSrc = item.src || (item.imgKey && CHAR_IMGS[item.imgKey] ? CHAR_IMGS[item.imgKey] : null);
 
     if (imgSrc && !loadedImages[item.imgKey]) {
       const im = new Image();
@@ -1569,7 +1911,8 @@
       sCtx.scale(a.flip ? -a.scale : a.scale, a.scale);
       if (a.imgKey && loadedImages[a.imgKey]) {
         const im = loadedImages[a.imgKey];
-        sCtx.drawImage(im, -55, -55, 110, 110);
+        const k = im.naturalWidth ? Math.min(110 / im.naturalWidth, 110 / im.naturalHeight) : 0;
+        if (k) sCtx.drawImage(im, (-im.naturalWidth * k) / 2, (-im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k);
       } else if (a.emoji) {
         sCtx.font = '72px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
         sCtx.fillText(a.emoji, 0, 0);
@@ -1807,7 +2150,7 @@
         <div class="gallery-card-footer">
           <span style="font-weight:800; font-size:0.85rem;">${item.title} (${item.date})</span>
           <div style="display:flex; gap:6px;">
-            <a href="${item.dataUrl}" download="atelier-magique-${item.id}.png" class="bg-chip" style="text-decoration:none;">⬇️</a>
+            <a href="${item.dataUrl}" download="atelier-magique-${item.id}.${item.dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}" class="bg-chip" style="text-decoration:none;">⬇️</a>
             <button class="bg-chip btn-del-img" style="background:#fee2e2;">🗑️</button>
           </div>
         </div>
@@ -1837,4 +2180,9 @@
   initColoringUI();
   initWorldUI();
   initMusicUI();
+
+  // Mode hors-ligne : le jeu reste disponible sans internet après la première visite
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 })();
