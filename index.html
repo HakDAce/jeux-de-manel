@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#7c3aed" />
+  <title>Dino & Magie : L'Atelier Créatif (6-7 ans)</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- BARRE DE NAVIGATION PRINCIPALE -->
+    <header class="top-nav">
+      <div class="brand" id="brandBtn" title="Dino & Magie">
+        <span class="brand-icon">🦖</span>
+        <span class="brand-text">Dino Magique</span>
+      </div>
+
+      <nav class="mode-tabs" aria-label="Activités">
+        <button class="mode-tab active" data-mode="coloring">
+          <span class="tab-emoji">🎨</span>
+          <span class="tab-label">Coloriage</span>
+        </button>
+        <button class="mode-tab" data-mode="world">
+          <span class="tab-emoji">🏰</span>
+          <span class="tab-label">Mon Monde</span>
+        </button>
+        <button class="mode-tab" data-mode="music">
+          <span class="tab-emoji">🎹</span>
+          <span class="tab-label">Musique</span>
+        </button>
+        <button class="mode-tab" data-mode="gallery">
+          <span class="tab-emoji">📸</span>
+          <span class="tab-label">Mon Album (<span id="galleryCount">0</span>)</span>
+        </button>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="icon-btn" id="voiceHelpBtn" title="Écouter l'aide vocale">🗣️</button>
+        <button class="icon-btn" id="soundToggleBtn" title="Activer / Couper le son">🔊</button>
+        <button class="icon-btn" id="fullscreenBtn" title="Plein écran">⛶</button>
+      </div>
+    </header>
+
+    <!-- ==========================================
+         ECRAN 1 : COLORIAGE & DESSIN MAGIQUE
+         ========================================== -->
+    <section class="screen active" id="screen-coloring">
+      <div class="coloring-layout">
+        <!-- Colonne Outils & Modèles -->
+        <aside class="left-sidebar">
+          <div class="section-label">Mes Outils</div>
+          <div class="tool-grid">
+            <button class="tool-btn active" data-tool="fill">
+              <span class="tool-icon">🪣</span>
+              <span class="tool-name">Pot Magique</span>
+            </button>
+            <button class="tool-btn" data-tool="brush">
+              <span class="tool-icon">🖌️</span>
+              <span class="tool-name">Pinceau</span>
+            </button>
+            <button class="tool-btn" data-tool="rainbow">
+              <span class="tool-icon">🌈</span>
+              <span class="tool-name">Arc-en-ciel</span>
+            </button>
+            <button class="tool-btn" data-tool="stamp">
+              <span class="tool-icon">⭐</span>
+              <span class="tool-name">Tampons</span>
+            </button>
+            <button class="tool-btn" data-tool="spray">
+              <span class="tool-icon">✨</span>
+              <span class="tool-name">Paillettes</span>
+            </button>
+            <button class="tool-btn" data-tool="eraser">
+              <span class="tool-icon">🧽</span>
+              <span class="tool-name">Gomme</span>
+            </button>
+          </div>
+
+          <div class="section-label">Taille du trait</div>
+          <div class="size-row">
+            <button class="size-btn" data-size="10" title="Petit">
+              <span class="size-dot" style="width: 10px; height: 10px;"></span>
+            </button>
+            <button class="size-btn active" data-size="22" title="Moyen">
+              <span class="size-dot" style="width: 18px; height: 18px;"></span>
+            </button>
+            <button class="size-btn" data-size="40" title="Géant">
+              <span class="size-dot" style="width: 28px; height: 28px;"></span>
+            </button>
+          </div>
+
+          <!-- Tiroir de Tampons Magiques -->
+          <div class="sticker-drawer" id="stickerDrawer">
+            <div class="section-label">Choisis ton tampon</div>
+            <div class="sticker-grid" id="stickerGrid">
+              <!-- Généré par JS -->
+            </div>
+          </div>
+
+          <div class="section-label">Dessins à colorier</div>
+          <div class="template-grid" id="templateGrid">
+            <!-- Généré par JS -->
+          </div>
+        </aside>
+
+        <!-- Zone Centrale : Toile de Dessin -->
+        <main class="canvas-area">
+          <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="paintCanvas" width="900" height="650"></canvas>
+
+            <div class="canvas-floating-actions">
+              <button class="action-pill pill-undo" id="undoBtn" title="Annuler le dernier geste">
+                <span>↩️</span> <span>Oups !</span>
+              </button>
+              <button class="action-pill pill-clear" id="clearBtn" title="Recommencer le dessin">
+                <span>🔄</span> <span>Recommencer</span>
+              </button>
+              <button class="action-pill pill-save" id="saveDrawingBtn" title="Sauvegarder dans mon album">
+                <span>📸</span> <span>Garder !</span>
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- Palette de Couleurs -->
+        <aside class="palette-bar">
+          <div class="section-label">Couleurs</div>
+          <div class="color-swatches" id="colorSwatches">
+            <!-- Généré par JS -->
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ECRAN 2 : MON MONDE DINO MAGIQUE (SCENE)
+         ========================================== -->
+    <section class="screen" id="screen-world">
+      <div class="world-layout">
+        <div class="world-stage bg-jungle" id="worldStage">
+          <!-- Décor SVG en arrière-plan -->
+          <svg class="world-scenery-svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+            <!-- Soleil / Lune -->
+            <circle id="worldSun" cx="880" cy="95" r="55" fill="#fde047" opacity="0.9" />
+            <!-- Nuages doux -->
+            <g fill="rgba(255,255,255,0.75)">
+              <ellipse cx="180" cy="95" rx="70" ry="30" />
+              <ellipse cx="220" cy="80" rx="50" ry="32" />
+              <ellipse cx="560" cy="115" rx="85" ry="28" />
+              <ellipse cx="600" cy="98" rx="55" ry="30" />
+            </g>
+            <!-- Collines douces -->
+            <path d="M0,360 Q250,270 520,360 T1000,340 L1000,600 L0,600 Z" fill="rgba(0,0,0,0.08)" />
+            <path d="M0,430 Q350,370 700,430 T1000,410 L1000,600 L0,600 Z" fill="rgba(255,255,255,0.12)" />
+          </svg>
+
+          <!-- Barre de contrôle du Monde -->
+          <div class="world-controls-top">
+            <div class="world-bg-picker">
+              <button class="bg-chip active" data-bg="bg-jungle">🌴 Jungle</button>
+              <button class="bg-chip" data-bg="bg-magic">🦄 Féerie</button>
+              <button class="bg-chip" data-bg="bg-volcano">🌋 Volcan</button>
+              <button class="bg-chip" data-bg="bg-night">🌙 Nuit Étoilée</button>
+            </div>
+
+            <div class="world-actor-tools">
+              <button class="bg-chip" id="worldDanceBtn" style="background:#fef08a; color:#854d0e;">💃 Faire danser !</button>
+              <button class="bg-chip" id="actorBiggerBtn" title="Agrandir">➕ Grand</button>
+              <button class="bg-chip" id="actorSmallerBtn" title="Rétrécir">➖ Petit</button>
+              <button class="bg-chip" id="actorFlipBtn" title="Tourner">↔️ Tourner</button>
+              <button class="bg-chip" id="actorDeleteBtn" style="background:#fee2e2; color:#991b1b;">🗑️ Enlever</button>
+              <button class="bg-chip" id="worldSaveBtn" style="background:#d1fae5; color:#065f46;">📸 Photo</button>
+            </div>
+          </div>
+
+          <!-- Conteneur des personnages posés par l'enfant -->
+          <div id="worldActorsLayer"></div>
+        </div>
+
+        <!-- Tiroir du bas : Personnages et Objets Magiques à toucher pour ajouter -->
+        <div class="world-tray" id="worldTray">
+          <!-- Généré par JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ECRAN 3 : L'ORCHESTRE DES DINOS (MUSIQUE)
+         ========================================== -->
+    <section class="screen" id="screen-music">
+      <div class="music-layout">
+        <div class="music-stage" id="musicStage">
+          <div class="music-top-bar">
+            <div class="instrument-selector">
+              <button class="inst-btn active" data-inst="piano">🎹 Piano Dino</button>
+              <button class="inst-btn" data-inst="marimba">🪵 Xylophone</button>
+              <button class="inst-btn" data-inst="magic">✨ Harpe Fée</button>
+              <button class="inst-btn" data-inst="synth">🐉 Dragon Fun</button>
+            </div>
+
+            <div class="rhythm-selector">
+              <button class="beat-btn" data-beat="jungle">🥁 Rythme Jungle</button>
+              <button class="beat-btn" data-beat="fairy">🧚 Mélodie Fée</button>
+              <button class="beat-btn" id="recordSongBtn">🔴 Enregistrer</button>
+              <button class="beat-btn" id="playSongBtn" style="display:none;">▶️ Écouter</button>
+            </div>
+          </div>
+
+          <!-- Les 4 Dinos Musiciens (Toucher pour jouer un accord/effet rigolo) -->
+          <div class="band-row">
+            <div class="dino-musician" data-member="rex">
+              <div class="musician-avatar">🦖</div>
+              <div class="musician-label">Rexy Boum-Boum</div>
+            </div>
+            <div class="dino-musician" data-member="unicorn">
+              <div class="musician-avatar">🦄</div>
+              <div class="musician-label">Stella Étoile</div>
+            </div>
+            <div class="dino-musician" data-member="diplo">
+              <div class="musician-avatar">🦕</div>
+              <div class="musician-label">Diplo Mélodie</div>
+            </div>
+            <div class="dino-musician" data-member="dragon">
+              <div class="musician-avatar">🐉</div>
+              <div class="musician-label">Drako Rigolo</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clavier Géant 8 Notes Arc-en-Ciel -->
+        <div class="piano-container" id="pianoContainer">
+          <!-- Généré par JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ECRAN 4 : MON ALBUM MAGIQUE (GALERIE)
+         ========================================== -->
+    <section class="screen" id="screen-gallery">
+      <div class="gallery-layout">
+        <div class="gallery-header">
+          <div class="gallery-title">📸 Mon Album de Créations Magiques</div>
+          <button class="action-pill pill-clear" id="clearGalleryBtn" style="font-size: 0.85rem;">
+            🗑️ Vider l'album
+          </button>
+        </div>
+        <div class="gallery-grid" id="galleryGrid">
+          <!-- Généré par JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Message Toast -->
+    <div class="toast-msg" id="toastMsg">Bravo ! 🌟</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
