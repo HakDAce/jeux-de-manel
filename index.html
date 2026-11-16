@@ -57,7 +57,12 @@
             <span class="pdb-icon">📚</span>
             <span class="pdb-text">Dessins</span>
           </button>
-          <input type="file" id="customImageInput" accept="image/*" style="display:none;" />
+
+          <div class="mode-row">
+            <button class="mode-btn active" data-play="free"><span>🎨</span>Libre</button>
+            <button class="mode-btn" data-play="num"><span>🔢</span>Numéros</button>
+            <button class="mode-btn" data-play="calc"><span>➕</span>Calculs</button>
+          </div>
 
           <div class="section-label">Mes Outils</div>
           <div class="tool-grid">
@@ -90,6 +95,8 @@
             <button class="pattern-btn" data-pattern="stripes" title="Rayures"><span class="pat pat-stripes"></span></button>
             <button class="pattern-btn" data-pattern="stars" title="Étoiles"><span class="pat pat-stars">★</span></button>
             <button class="pattern-btn" data-pattern="hearts" title="Cœurs"><span class="pat pat-hearts">♥</span></button>
+            <button class="pattern-btn" data-pattern="gradient" title="Dégradé"><span class="pat pat-gradient"></span></button>
+            <button class="pattern-btn" data-pattern="glitter" title="Paillettes"><span class="pat pat-glitter">✨</span></button>
           </div>
 
           <div class="section-label">Taille du pinceau</div>
@@ -132,6 +139,8 @@
               <span>👀 Modèle (Toucher)</span>
             </div>
 
+            <button class="zoom-reset" id="zoomResetBtn">🔍 Vue entière</button>
+
             <div class="canvas-floating-actions">
               <button class="action-pill pill-undo" id="undoBtn" title="Annuler le dernier geste">
                 <span>↩️</span> <span>Oups !</span>
@@ -148,7 +157,7 @@
 
         <!-- Palette de Couleurs -->
         <aside class="palette-bar">
-          <div class="section-label">Couleurs</div>
+          <div class="section-label" id="paletteLabel">Couleurs</div>
           <div class="color-swatches" id="colorSwatches">
             <!-- Généré par JS -->
           </div>
@@ -275,7 +284,11 @@
       <div class="picker-panel">
         <div class="picker-head">
           <div class="picker-title">📚 Choisis ton dessin !</div>
-          <button class="picker-close" id="pickerClose" aria-label="Fermer">✖</button>
+          <div class="picker-head-right">
+            <span class="picker-stars" id="pickerStars"></span>
+            <button class="picker-print" id="printBtn" title="Imprimer le dessin ouvert, sans couleurs">🖨️ Imprimer</button>
+            <button class="picker-close" id="pickerClose" aria-label="Fermer">✖</button>
+          </div>
         </div>
         <div class="picker-cats" id="pickerCats"></div>
         <div class="picker-grid" id="pickerGrid"></div>
@@ -289,6 +302,7 @@
         <div class="celebrate-stars">⭐⭐⭐⭐⭐</div>
         <div class="celebrate-title">Bravo Manel !</div>
         <div class="celebrate-text">Ton coloriage est magnifique !</div>
+        <div class="celebrate-extra" id="celebrateExtra"></div>
         <div class="celebrate-actions">
           <button class="action-pill pill-save" id="celebrateSave">📸 Garder dans mon album</button>
           <button class="action-pill pill-undo" id="celebrateClose">🎨 Continuer</button>
@@ -298,6 +312,8 @@
 
     <div class="toast-msg" id="toastMsg">Bravo ! 🌟</div>
   </div>
+
+  <div id="printSheet"><img id="printImg" alt="" /></div>
 
   <script src="coloriages.js"></script>
   <script src="characters-data.js"></script>

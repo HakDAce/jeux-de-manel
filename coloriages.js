@@ -630,6 +630,297 @@
     ].join('')
   });
 
+  // 13. BONHOMME DE NEIGE
+  PAGES.push({
+    id: 'neige', name: 'Bonhomme de neige', cat: 'saisons', speak: 'Le bonhomme de neige',
+    svg: () => [
+      cloud(150, 90, 0.9),
+      cloud(720, 80, 0.8),
+      bubbles([[80, 220, 9], [250, 180, 8], [620, 200, 9], [860, 240, 8], [200, 330, 8], [840, 400, 9], [90, 420, 8], [600, 60, 8]]),
+      // sapin
+      `<path d="M705 580 L705 500 L745 500 L745 580 Z" fill="#a16207"/>`,
+      `<path d="M610 510 L725 380 L840 510 Z" fill="#16a34a"/>`,
+      `<path d="M635 410 L725 300 L815 410 Z" fill="#22c55e"/>`,
+      `<path d="M660 320 L725 230 L790 320 Z" fill="#4ade80"/>`,
+      star(725, 222, 22, '#fde047'),
+      ground(548, '#e0f2fe'),
+      // bras
+      `<path d="M385 330 L290 275 M322 293 L300 258 M322 293 L286 300 M515 330 L610 275 M578 293 L600 258 M578 293 L614 300" fill="none" stroke-width="7"/>`,
+      // corps
+      `<circle cx="450" cy="470" r="96" fill="#ffffff"/>`,
+      `<circle cx="450" cy="335" r="72" fill="#ffffff"/>`,
+      `<circle cx="450" cy="220" r="56" fill="#ffffff"/>`,
+      // chapeau
+      `<path d="M408 178 L408 108 L492 108 L492 178 Z" fill="#64748b"/>`,
+      `<path d="M408 150 L492 150 L492 178 L408 178 Z" fill="#ef4444" stroke-width="5"/>`,
+      `<path d="M378 176 L522 176 L522 194 L378 194 Z" fill="#64748b"/>`,
+      // écharpe
+      `<path d="M394 262 Q450 296 506 262 L512 288 Q450 324 388 288 Z" fill="#ef4444"/>`,
+      `<path d="M476 302 L492 372 L526 364 L506 292 Z" fill="#ef4444"/>`,
+      // visage
+      `<circle class="ink" cx="430" cy="210" r="7" fill="${INK}" stroke-width="2"/><circle class="ink" cx="470" cy="210" r="7" fill="${INK}" stroke-width="2"/>`,
+      `<path d="M448 222 L524 236 L448 246 Z" fill="#fb923c" stroke-width="5"/>`,
+      `<path d="M424 250 Q450 266 476 250" fill="none" stroke-width="5"/>`,
+      // boutons
+      `<circle cx="450" cy="340" r="11" fill="#60a5fa" stroke-width="5"/>`,
+      `<circle cx="450" cy="430" r="12" fill="#60a5fa" stroke-width="5"/>`,
+      `<circle cx="450" cy="480" r="12" fill="#60a5fa" stroke-width="5"/>`,
+      // cadeau
+      `<path d="M150 600 L150 510 L260 510 L260 600 Z" fill="#f472b6"/>`,
+      `<path d="M195 510 L215 510 L215 600 L195 600 Z" fill="#fde047" stroke-width="5"/>`,
+      `<path d="M205 510 Q160 460 170 500 Q175 512 205 510 Q250 460 240 500 Q235 512 205 510 Z" fill="#fde047" stroke-width="5"/>`
+    ].join('')
+  });
+
+  // 14. VACHE À LA FERME
+  PAGES.push({
+    id: 'vache', name: 'Vache', cat: 'animaux', speak: 'La vache à la ferme',
+    svg: () => [
+      sun(110, 100, 46),
+      cloud(380, 90, 0.9),
+      // grange
+      `<path d="M690 590 L690 380 L768 300 L846 380 L846 590 Z" fill="#ef4444"/>`,
+      `<path d="M672 392 L768 292 L864 392 L846 402 L768 322 L690 402 Z" fill="#94a3b8" stroke-width="6"/>`,
+      `<path d="M736 590 L736 450 L800 450 L800 590 Z" fill="#fef3c7"/>`,
+      `<path d="M736 450 L800 560 M800 450 L736 560" fill="none" stroke-width="5"/>`,
+      `<circle cx="768" cy="372" r="18" fill="#fef3c7" stroke-width="5"/>`,
+      ground(548),
+      flower(90, 490, 22, '#f472b6', '#facc15', 580),
+      // queue
+      `<path d="M204 320 Q160 340 166 404" fill="none" stroke-width="7"/>`,
+      `<ellipse cx="166" cy="416" rx="13" ry="20" fill="#64748b" stroke-width="5"/>`,
+      // pattes arrière
+      `<path d="M292 450 L292 548 L330 548 L330 450 Z" fill="#e5e7eb"/>`,
+      `<path d="M418 450 L418 548 L456 548 L456 450 Z" fill="#e5e7eb"/>`,
+      // pis
+      `<path d="M352 462 Q352 508 396 508 Q440 508 440 462 Z" fill="#fda4af"/>`,
+      // corps
+      `<path d="M200 330 Q200 280 260 280 L470 280 Q530 280 530 340 L530 440 Q530 472 498 472 L232 472 Q200 472 200 440 Z" fill="#ffffff"/>`,
+      `<path d="M252 322 Q300 290 340 330 Q352 372 300 380 Q250 372 252 322 Z" fill="#64748b" stroke-width="6"/>`,
+      `<path d="M380 400 Q420 372 462 396 Q478 436 430 444 Q376 440 380 400 Z" fill="#64748b" stroke-width="6"/>`,
+      `<ellipse cx="418" cy="316" rx="26" ry="19" fill="#64748b" stroke-width="6"/>`,
+      // pattes avant
+      `<path d="M226 460 L226 556 L268 556 L268 460 Z" fill="#ffffff"/>`,
+      `<path d="M472 460 L472 556 L514 556 L514 460 Z" fill="#ffffff"/>`,
+      `<path d="M224 556 L270 556 L270 578 L224 578 Z" fill="#64748b" stroke-width="5"/>`,
+      `<path d="M470 556 L516 556 L516 578 L470 578 Z" fill="#64748b" stroke-width="5"/>`,
+      // cornes + oreilles
+      `<path d="M530 236 Q516 196 540 190 Q546 218 552 232 Z" fill="#fef9c3" stroke-width="6"/>`,
+      `<path d="M606 236 Q620 196 596 190 Q590 218 584 232 Z" fill="#fef9c3" stroke-width="6"/>`,
+      `<path d="M512 262 Q470 240 462 276 Q482 302 518 288 Z" fill="#fbcfe8" stroke-width="6"/>`,
+      `<path d="M624 262 Q666 240 674 276 Q654 302 618 288 Z" fill="#fbcfe8" stroke-width="6"/>`,
+      // tête
+      `<ellipse cx="568" cy="300" rx="62" ry="72" fill="#ffffff"/>`,
+      `<ellipse cx="568" cy="350" rx="52" ry="34" fill="#fda4af"/>`,
+      `<ellipse class="ink" cx="550" cy="350" rx="6" ry="9" fill="${INK}" stroke-width="2"/><ellipse class="ink" cx="586" cy="350" rx="6" ry="9" fill="${INK}" stroke-width="2"/>`,
+      eye(546, 286, 14),
+      eye(590, 286, 14),
+      // cloche
+      `<path d="M546 384 L590 384 L598 424 L538 424 Z" fill="#fde047" stroke-width="6"/>`,
+      `<circle cx="568" cy="430" r="8" fill="#fb923c" stroke-width="4"/>`,
+      grassTufts([[160, 610], [380, 600], [620, 606]])
+    ].join('')
+  });
+
+  // 15. PETITE VOITURE
+  PAGES.push({
+    id: 'voiture', name: 'Voiture', cat: 'aventure', speak: 'La petite voiture',
+    svg: () => [
+      sun(790, 100, 46),
+      cloud(160, 90, 1),
+      cloud(480, 70, 0.7),
+      `<path d="M-10 530 Q200 380 460 530 Z" fill="#4ade80"/>`,
+      `<path d="M380 530 Q650 400 910 530 Z" fill="#86efac"/>`,
+      `<path d="M-10 520 L910 520 L910 660 L-10 660 Z" fill="#94a3b8"/>`,
+      `<path d="M40 590 L150 590 L150 608 L40 608 Z" fill="#fef9c3" stroke-width="5"/>`,
+      `<path d="M270 590 L380 590 L380 608 L270 608 Z" fill="#fef9c3" stroke-width="5"/>`,
+      `<path d="M500 590 L610 590 L610 608 L500 608 Z" fill="#fef9c3" stroke-width="5"/>`,
+      `<path d="M730 590 L840 590 L840 608 L730 608 Z" fill="#fef9c3" stroke-width="5"/>`,
+      // carrosserie
+      `<path d="M170 500 L170 420 Q170 400 196 396 L290 380 Q330 290 400 285 L540 285 Q600 290 640 380 L722 396 Q752 402 752 430 L752 500 Z" fill="#ef4444"/>`,
+      `<path d="M320 378 Q346 316 400 312 L446 312 L446 378 Z" fill="#bae6fd" stroke-width="6"/>`,
+      `<path d="M472 312 L536 312 Q586 318 606 378 L472 378 Z" fill="#bae6fd" stroke-width="6"/>`,
+      `<path d="M459 380 L459 496 M490 420 L530 420" fill="none" stroke-width="6"/>`,
+      `<ellipse cx="734" cy="432" rx="12" ry="19" fill="#fde047" stroke-width="5"/>`,
+      `<path d="M160 470 L200 470 L200 492 L160 492 Z" fill="#e5e7eb" stroke-width="5"/>`,
+      `<path d="M722 470 L764 470 L764 492 L722 492 Z" fill="#e5e7eb" stroke-width="5"/>`,
+      heart(250, 440, 20, '#fde047'),
+      // roues
+      `<circle cx="290" cy="500" r="56" fill="#64748b"/>`,
+      `<circle cx="290" cy="500" r="26" fill="#e5e7eb" stroke-width="6"/>`,
+      `<circle cx="630" cy="500" r="56" fill="#64748b"/>`,
+      `<circle cx="630" cy="500" r="26" fill="#e5e7eb" stroke-width="6"/>`
+    ].join('')
+  });
+
+  // 16. PETIT TRAIN
+  PAGES.push({
+    id: 'train', name: 'Petit train', cat: 'aventure', speak: 'Le petit train',
+    svg: () => [
+      sun(110, 100, 46),
+      cloud(300, 90, 0.8),
+      cloud(540, 170, 0.5, '#e5e7eb'),
+      cloud(630, 110, 0.75, '#e5e7eb'),
+      // arbre
+      `<path d="M772 560 L772 430 L808 430 L808 560 Z" fill="#a16207"/>`,
+      `<circle cx="790" cy="360" r="88" fill="#22c55e"/>`,
+      `<circle cx="752" cy="340" r="13" fill="#ef4444" stroke-width="5"/><circle cx="820" cy="318" r="13" fill="#ef4444" stroke-width="5"/><circle cx="800" cy="394" r="13" fill="#ef4444" stroke-width="5"/>`,
+      `<path d="M-10 552 L910 552 L910 660 L-10 660 Z" fill="#86efac"/>`,
+      `<path d="M-10 572 L910 572 L910 592 L-10 592 Z" fill="#a8a29e" stroke-width="5"/>`,
+      // locomotive
+      `<path d="M550 500 L630 500 L550 420 Z" fill="#fde047"/>`,
+      `<path d="M450 340 L450 272 L432 248 L528 248 L510 272 L510 340 Z" fill="#64748b"/>`,
+      `<path d="M346 340 Q346 296 380 296 Q414 296 414 340 Z" fill="#fde047"/>`,
+      `<path d="M290 500 L290 340 L520 340 Q552 340 552 372 L552 500 Z" fill="#ef4444"/>`,
+      `<path d="M290 410 L552 410 L552 436 L290 436 Z" fill="#fde047" stroke-width="5"/>`,
+      `<path d="M130 500 L130 260 L290 260 L290 500 Z" fill="#60a5fa"/>`,
+      `<path d="M108 262 L312 262 L312 230 L108 230 Z" fill="#a78bfa"/>`,
+      `<path d="M160 292 L260 292 L260 372 L160 372 Z" fill="#fef9c3" stroke-width="6"/>`,
+      `<ellipse cx="538" cy="380" rx="10" ry="14" fill="#fef9c3" stroke-width="5"/>`,
+      // roues
+      `<circle cx="196" cy="510" r="52" fill="#fb923c"/><circle cx="196" cy="510" r="18" fill="#fef9c3" stroke-width="5"/>`,
+      `<circle cx="346" cy="524" r="38" fill="#fb923c"/><circle cx="346" cy="524" r="13" fill="#fef9c3" stroke-width="5"/>`,
+      `<circle cx="470" cy="524" r="38" fill="#fb923c"/><circle cx="470" cy="524" r="13" fill="#fef9c3" stroke-width="5"/>`
+    ].join('')
+  });
+
+  // 17. GÂTEAU D'ANNIVERSAIRE
+  PAGES.push({
+    id: 'gateau', name: 'Gâteau', cat: 'saisons', speak: 'Le gâteau d\'anniversaire',
+    svg: () => [
+      // ballons
+      `<path d="M110 250 Q134 330 100 430 M790 240 Q770 330 800 430 M716 322 Q700 380 720 440" fill="none" stroke-width="5"/>`,
+      `<ellipse cx="110" cy="180" rx="58" ry="70" fill="#ef4444"/>`,
+      `<ellipse cx="790" cy="170" rx="58" ry="70" fill="#60a5fa"/>`,
+      `<ellipse cx="716" cy="270" rx="44" ry="54" fill="#fde047"/>`,
+      star(230, 90, 20, '#fde047'),
+      star(620, 70, 18, '#fde047'),
+      heart(200, 330, 18, '#fb7185'),
+      // plat
+      `<ellipse cx="450" cy="566" rx="310" ry="42" fill="#e5e7eb"/>`,
+      // étage du bas
+      `<path d="M220 560 L220 420 L680 420 L680 560 Z" fill="#f9a8d4"/>`,
+      `<path d="M220 420 L680 420 L680 456 Q655 488 630 456 Q605 488 580 456 Q555 488 530 456 Q505 488 480 456 Q455 488 430 456 Q405 488 380 456 Q355 488 330 456 Q305 488 280 456 Q250 488 220 456 Z" fill="#fef3c7" stroke-width="6"/>`,
+      heart(300, 518, 17, '#ef4444'),
+      star(450, 516, 22, '#fde047'),
+      heart(600, 518, 17, '#ef4444'),
+      // étage du haut
+      `<path d="M300 420 L300 300 L600 300 L600 420 Z" fill="#c084fc"/>`,
+      `<path d="M300 300 L600 300 L600 332 Q575 362 550 332 Q525 362 500 332 Q475 362 450 332 Q425 362 400 332 Q375 362 350 332 Q325 362 300 332 Z" fill="#fef3c7" stroke-width="6"/>`,
+      `<circle cx="350" cy="390" r="13" fill="#ef4444" stroke-width="5"/><circle cx="450" cy="390" r="13" fill="#ef4444" stroke-width="5"/><circle cx="550" cy="390" r="13" fill="#ef4444" stroke-width="5"/>`,
+      // bougies
+      `<path d="M368 300 L368 222 L392 222 L392 300 Z" fill="#60a5fa" stroke-width="6"/>`,
+      `<path d="M438 300 L438 222 L462 222 L462 300 Z" fill="#4ade80" stroke-width="6"/>`,
+      `<path d="M508 300 L508 222 L532 222 L532 300 Z" fill="#fb7185" stroke-width="6"/>`,
+      `<path d="M380 216 Q360 190 380 162 Q400 190 380 216 Z" fill="#fb923c" stroke-width="5"/>`,
+      `<path d="M450 216 Q430 190 450 162 Q470 190 450 216 Z" fill="#fb923c" stroke-width="5"/>`,
+      `<path d="M520 216 Q500 190 520 162 Q540 190 520 216 Z" fill="#fb923c" stroke-width="5"/>`
+    ].join('')
+  });
+
+  // 18. HIBOU
+  PAGES.push({
+    id: 'hibou', name: 'Hibou', cat: 'animaux', speak: 'Le hibou sur sa branche',
+    svg: () => [
+      `<circle cx="770" cy="120" r="56" fill="#fef9c3"/>`,
+      star(110, 100, 26, '#fde047'),
+      star(240, 200, 18, '#fde047'),
+      star(640, 230, 18, '#fde047'),
+      star(820, 300, 22, '#fde047'),
+      // branche + feuilles
+      `<path d="M-10 500 Q300 470 910 520 L910 556 Q300 508 -10 540 Z" fill="#a16207"/>`,
+      `<path d="M130 492 Q160 420 220 440 Q200 500 130 492 Z" fill="#fb923c"/>`,
+      `<path d="M200 500 Q250 450 290 480 Q250 520 200 500 Z" fill="#facc15"/>`,
+      `<path d="M690 512 Q730 446 790 470 Q762 530 690 512 Z" fill="#fb923c"/>`,
+      `<path d="M640 508 Q650 450 700 446 Q700 500 640 508 Z" fill="#ef4444"/>`,
+      // aigrettes
+      `<path d="M336 210 L318 118 L404 168 Z" fill="#d97706"/>`,
+      `<path d="M564 210 L582 118 L496 168 Z" fill="#d97706"/>`,
+      // ailes (derrière)
+      `<path d="M304 300 Q236 380 300 470 Q344 400 336 310 Z" fill="#a16207"/>`,
+      `<path d="M596 300 Q664 380 600 470 Q556 400 564 310 Z" fill="#a16207"/>`,
+      // corps
+      `<path d="M450 150 Q600 150 600 330 Q600 500 450 500 Q300 500 300 330 Q300 150 450 150 Z" fill="#d97706"/>`,
+      `<path d="M450 300 Q530 300 530 394 Q530 482 450 482 Q370 482 370 394 Q370 300 450 300 Z" fill="#fde68a"/>`,
+      `<path d="M400 370 Q415 392 430 370 M470 370 Q485 392 500 370 M435 420 Q450 442 465 420" fill="none" stroke-width="5"/>`,
+      // yeux
+      `<circle cx="394" cy="250" r="56" fill="#fef3c7"/>`,
+      `<circle cx="506" cy="250" r="56" fill="#fef3c7"/>`,
+      eye(394, 250, 34),
+      eye(506, 250, 34),
+      `<path d="M428 286 L472 286 L450 326 Z" fill="#fb923c" stroke-width="6"/>`,
+      // pattes
+      `<ellipse cx="410" cy="502" rx="26" ry="14" fill="#fb923c" stroke-width="6"/>`,
+      `<ellipse cx="490" cy="502" rx="26" ry="14" fill="#fb923c" stroke-width="6"/>`
+    ].join('')
+  });
+
+  // 19. CHÂTEAU DE SABLE
+  PAGES.push({
+    id: 'plage', name: 'Château de sable', cat: 'saisons', speak: 'Le château de sable à la plage',
+    svg: () => [
+      sun(120, 100, 46),
+      cloud(420, 80, 0.8),
+      // bateau
+      `<path d="M690 322 L690 214 L770 322 Z" fill="#fef3c7" stroke-width="6"/>`,
+      `<path d="M676 322 L676 240 L626 322 Z" fill="#fde047" stroke-width="6"/>`,
+      `<path d="M610 322 L790 322 L760 362 L640 362 Z" fill="#ef4444"/>`,
+      // mer
+      `<path d="M-10 350 Q50 328 110 350 T230 350 T350 350 T470 350 T590 350 T710 350 T830 350 T950 350 L910 480 L-10 480 Z" fill="#60a5fa"/>`,
+      // sable
+      `<path d="M-10 460 Q450 428 910 460 L910 660 L-10 660 Z" fill="#fde68a"/>`,
+      // tour
+      `<path d="M450 276 L450 200" fill="none" stroke-width="6"/>`,
+      `<path d="M450 200 L504 216 L450 234 Z" fill="#ef4444" stroke-width="5"/>`,
+      `<path d="M395 420 L395 300 L505 300 L505 420 Z" fill="#fdba74"/>`,
+      `<path d="M383 302 L383 270 L413 270 L413 286 L435 286 L435 270 L465 270 L465 286 L487 286 L487 270 L517 270 L517 302 Z" fill="#fb923c"/>`,
+      `<path d="M434 372 L434 338 Q450 318 466 338 L466 372 Z" fill="#a16207" stroke-width="6"/>`,
+      // muraille
+      `<path d="M300 570 L300 440 L600 440 L600 570 Z" fill="#fdba74"/>`,
+      `<path d="M290 442 L290 404 L340 404 L340 424 L385 424 L385 404 L430 404 L430 424 L470 424 L470 404 L515 404 L515 424 L560 424 L560 404 L610 404 L610 442 Z" fill="#fb923c"/>`,
+      `<path d="M418 570 L418 506 Q450 466 482 506 L482 570 Z" fill="#a16207"/>`,
+      `<circle cx="345" cy="500" r="15" fill="#f9a8d4" stroke-width="5"/>`,
+      `<circle cx="555" cy="500" r="15" fill="#f9a8d4" stroke-width="5"/>`,
+      // seau
+      `<path d="M706 520 Q746 468 786 520" fill="none" stroke-width="6"/>`,
+      `<path d="M690 604 L704 520 L788 520 L802 604 Z" fill="#38bdf8"/>`,
+      `<path d="M700 546 L792 546 L796 570 L696 570 Z" fill="#fde047" stroke-width="5"/>`,
+      // pelle
+      `<path d="M176 612 L196 512 L212 515 L192 615 Z" fill="#ef4444" stroke-width="5"/>`,
+      `<path d="M188 514 Q174 466 212 460 Q246 472 222 520 Z" fill="#4ade80" stroke-width="6"/>`,
+      // ballon
+      `<circle cx="100" cy="556" r="46" fill="#f472b6"/>`,
+      `<path d="M100 510 Q62 556 100 602 Q138 556 100 510 Z" fill="#fef9c3" stroke-width="5"/>`,
+      star(250, 610, 26, '#fb923c', 12),
+      star(620, 616, 22, '#fb923c', 10)
+    ].join('')
+  });
+
+  // 20. MONTGOLFIÈRE
+  PAGES.push({
+    id: 'ballon', name: 'Montgolfière', cat: 'aventure', speak: 'La montgolfière',
+    svg: () => [
+      sun(110, 100, 46),
+      cloud(760, 120, 1),
+      cloud(140, 300, 0.8),
+      cloud(780, 380, 0.7),
+      `<path d="M620 90 Q636 74 652 90 Q668 74 684 90 M240 190 Q254 176 268 190 Q282 176 296 190" fill="none" stroke-width="5"/>`,
+      `<path d="M-10 600 Q225 540 450 600 T910 590 L910 660 L-10 660 Z" fill="#86efac"/>`,
+      `<g transform="translate(0 -40)">` +
+        `<path d="M450 80 Q250 80 250 270 Q250 380 390 450 L410 450 Q330 380 330 270 Q330 80 450 80 Z" fill="#ef4444"/>` +
+        `<path d="M450 80 Q330 80 330 270 Q330 380 410 450 L435 450 Q400 380 400 270 Q400 80 450 80 Z" fill="#fde047"/>` +
+        `<path d="M450 80 Q400 80 400 270 Q400 380 435 450 L465 450 Q500 380 500 270 Q500 80 450 80 Z" fill="#60a5fa"/>` +
+        `<path d="M450 80 Q570 80 570 270 Q570 380 490 450 L465 450 Q500 380 500 270 Q500 80 450 80 Z" fill="#fde047"/>` +
+        `<path d="M450 80 Q650 80 650 270 Q650 380 510 450 L490 450 Q570 380 570 270 Q570 80 450 80 Z" fill="#ef4444"/>` +
+        `<path d="M390 450 L510 450 L496 482 L404 482 Z" fill="#c084fc"/>` +
+        `<path d="M410 482 L418 534 M490 482 L482 534" fill="none" stroke-width="5"/>` +
+        `<path d="M404 534 L496 534 L486 600 L414 600 Z" fill="#d97706"/>` +
+        `<path d="M408 556 L492 556 M411 578 L489 578 M436 534 L440 600 M464 534 L460 600" fill="none" stroke-width="4"/>` +
+        `<path d="M398 524 L502 524 L502 540 L398 540 Z" fill="#a16207" stroke-width="5"/>` +
+      `</g>`
+    ].join('')
+  });
+
   // ---------- Fabrication des SVG ----------
   function wrap(body, lineOnly) {
     const style = lineOnly
@@ -659,6 +950,7 @@
     { id: 'magie', label: 'Magie', emoji: '🦄' },
     { id: 'animaux', label: 'Animaux', emoji: '🐱' },
     { id: 'mer', label: 'La mer', emoji: '🐠' },
-    { id: 'aventure', label: 'Espace', emoji: '🚀' }
+    { id: 'aventure', label: 'Véhicules', emoji: '🚀' },
+    { id: 'saisons', label: 'Fêtes & saisons', emoji: '🎂' }
   ];
 })();

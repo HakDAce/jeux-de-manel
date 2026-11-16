@@ -1146,9 +1146,9 @@ html, body {
 .tool-grid { grid-template-columns: repeat(3, 1fr); }
 
 .pattern-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  justify-content: space-between;
 }
 .pattern-btn {
   --pc: #38bdf8;
@@ -1359,7 +1359,102 @@ html, body {
 @media (max-width: 900px) {
   .toast-msg { bottom: 110px; }
   .pick-drawing-btn { min-width: 120px; font-size: 1.1rem; }
-  .pattern-row { flex-shrink: 0; min-width: 240px; }
+  .pattern-row { flex-shrink: 0; display: flex; }
+  .pattern-btn { min-width: 46px; }
+  .mode-row { flex-shrink: 0; min-width: 270px; }
   .guard-btn { min-width: 150px; }
   .picker-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* ==========================================
+   COLORIAGE v3 : modes de jeu, zoom, déblocage, impression
+   ========================================== */
+#paintCanvas { transform-origin: 0 0; will-change: transform; }
+#paintCanvas.shake { animation: canvasShake 0.35s; }
+@keyframes canvasShake {
+  0%, 100% { margin-left: 0; }
+  25% { margin-left: -10px; }
+  75% { margin-left: 10px; }
+}
+
+.mode-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px;
+  border-radius: 14px;
+  border: 3px solid #e5e7eb;
+  background: #ffffff;
+  font-weight: 900;
+  font-size: 0.78rem;
+  color: #374151;
+  cursor: pointer;
+}
+.mode-btn span { font-size: 1.4rem; }
+.mode-btn.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; box-shadow: 0 3px 0 #d97706; }
+
+/* En mode numéros, seuls les numéros servent */
+.num-mode .tool-grid, .num-mode .pattern-row, .num-mode .size-row, .num-mode .guard-btn,
+.num-mode .left-sidebar .section-label { opacity: 0.3; pointer-events: none; }
+.num-mode .model-preview-card { display: none; }
+.num-swatch { font-weight: 900; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; }
+.num-swatch.finished { opacity: 0.45; }
+
+.pat-gradient { background-image: linear-gradient(to bottom, rgba(255,255,255,0.8), transparent); }
+.pat-glitter { font-size: 0.9rem; }
+
+.zoom-reset {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  display: none;
+  z-index: 15;
+  border-radius: 999px;
+  border: 3px solid #ffffff;
+  background: #1e1b4b;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.95rem;
+  padding: 8px 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.zoom-reset.visible { display: block; }
+
+.picker-head-right { display: flex; align-items: center; gap: 10px; }
+.picker-stars { font-weight: 900; font-size: 1.2rem; color: #92400e; background: #fef3c7; border-radius: 999px; padding: 8px 14px; }
+.picker-print {
+  border-radius: 999px;
+  border: 3px solid #e5e7eb;
+  background: #f9fafb;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 9px 14px;
+  color: #374151;
+  cursor: pointer;
+}
+.picker-card.locked { background: #f3f4f6; box-shadow: none; }
+.picker-card.locked .pc-thumb { opacity: 0.22; filter: grayscale(1); }
+.picker-card.locked .pc-name { font-size: 0.92rem; color: #6b7280; }
+.pc-lock { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font-size: 2.8rem; }
+
+.celebrate-extra { font-weight: 800; color: #5b21b6; font-size: 1.05rem; margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px; }
+.celebrate-text { margin-bottom: 10px; }
+
+.sticker-card { border-color: #fde047 !important; background: #fffbeb !important; }
+.sticker-card .spawn-thumb { object-fit: contain; background: #ffffff; }
+
+#printSheet { display: none; }
+@media print {
+  @page { size: landscape; margin: 10mm; }
+  html, body { background: #ffffff !important; overflow: visible !important; height: auto !important; }
+  #app { display: none !important; }
+  #printSheet { display: block; }
+  #printSheet img { width: 100%; height: auto; }
+}
+
+@media (max-width: 580px) {
+  .picker-print, .picker-stars { display: none; }
 }
