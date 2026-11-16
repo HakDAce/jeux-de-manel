@@ -8,7 +8,6 @@
   --danger: #ef4444;
   --text-dark: #1e1b4b;
   --shadow-soft: 0 8px 20px rgba(30, 27, 75, 0.18);
-  --shadow-btn: 0 5px 0 rgba(0, 0, 0, 0.2);
 }
 
 * {
@@ -61,7 +60,7 @@ html, body {
   align-items: center;
   gap: 8px;
   font-weight: 900;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   color: #6d28d9;
   cursor: pointer;
   padding: 4px 8px;
@@ -199,7 +198,7 @@ html, body {
 
 /* Colonne Gauche : Outils & Modèles */
 .left-sidebar {
-  width: 225px;
+  width: 245px;
   background: var(--panel-bg);
   border-radius: 24px;
   padding: 10px;
@@ -209,11 +208,13 @@ html, body {
   box-shadow: var(--shadow-soft);
   border: 3px solid #ffffff;
   overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   flex-shrink: 0;
 }
 
 .section-label {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -224,8 +225,8 @@ html, body {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
 
 .tool-btn {
@@ -233,34 +234,34 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 4px;
-  border-radius: 16px;
+  padding: 7px 3px;
+  border-radius: 15px;
   border: 3px solid #e5e7eb;
   background: #ffffff;
   cursor: pointer;
-  box-shadow: 0 4px 0 #e5e7eb;
+  box-shadow: 0 3px 0 #e5e7eb;
   transition: all 0.12s ease;
   gap: 2px;
 }
 
 .tool-btn .tool-icon {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
 }
 
 .tool-btn .tool-name {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: #374151;
 }
 
 .tool-btn:active {
-  transform: translateY(3px);
+  transform: translateY(2px);
 }
 
 .tool-btn.active {
   background: #ede9fe;
   border-color: #7c3aed;
-  box-shadow: 0 4px 0 #7c3aed;
+  box-shadow: 0 3px 0 #7c3aed;
 }
 
 .tool-btn.active .tool-name {
@@ -273,22 +274,21 @@ html, body {
   justify-content: space-around;
   align-items: center;
   background: #f3f4f6;
-  padding: 6px;
-  border-radius: 16px;
+  padding: 5px;
+  border-radius: 14px;
   gap: 6px;
 }
 
 .size-btn {
   flex: 1;
-  height: 42px;
-  border-radius: 12px;
+  height: 38px;
+  border-radius: 10px;
   border: 2px solid transparent;
   background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
 .size-btn.active {
@@ -319,29 +319,28 @@ html, body {
 .sticker-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 5px;
 }
 
 .sticker-item {
-  height: 44px;
-  border-radius: 12px;
+  height: 42px;
+  border-radius: 10px;
   border: 2px solid #e9d5ff;
   background: #ffffff;
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.12s;
 }
 
 .sticker-item.active {
   border-color: #9333ea;
   background: #f3e8ff;
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
-/* Choix du dessin (Modèles) */
+/* Choix du dessin (Modèles avec vraies miniatures) */
 .template-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -353,21 +352,41 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 7px 4px;
-  border-radius: 14px;
+  padding: 6px 4px;
+  border-radius: 16px;
   border: 3px solid #e5e7eb;
   background: #ffffff;
   cursor: pointer;
   box-shadow: 0 3px 0 #e5e7eb;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 800;
   color: #374151;
   text-align: center;
-  gap: 2px;
+  gap: 4px;
+  transition: transform 0.12s;
+}
+
+.template-card:active {
+  transform: scale(0.95);
+}
+
+.template-card img.tpl-thumb {
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #f3f4f6;
+  background: #ffffff;
+  pointer-events: none;
 }
 
 .template-card span.tpl-emoji {
-  font-size: 1.55rem;
+  font-size: 2rem;
+  line-height: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .template-card.active {
@@ -409,6 +428,49 @@ html, body {
   cursor: crosshair;
 }
 
+/* Miniature Modèle Couleur en haut à gauche de la toile */
+.model-preview-card {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 4px solid #7c3aed;
+  border-radius: 18px;
+  padding: 5px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  z-index: 15;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.model-preview-card.visible {
+  display: flex;
+}
+
+.model-preview-card img {
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.model-preview-card.zoomed img {
+  width: 210px;
+  height: 210px;
+}
+
+.model-preview-card span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #5b21b6;
+}
+
 /* Barre d'actions rapides sur le dessin */
 .canvas-floating-actions {
   position: absolute;
@@ -416,7 +478,8 @@ html, body {
   right: 12px;
   display: flex;
   gap: 8px;
-  z-index: 10;
+  z-index: 15;
+  flex-wrap: wrap;
 }
 
 .action-pill {
@@ -427,7 +490,7 @@ html, body {
   border-radius: 18px;
   border: 3px solid #ffffff;
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
   transition: transform 0.12s ease;
@@ -435,6 +498,11 @@ html, body {
 
 .action-pill:active {
   transform: scale(0.93);
+}
+
+.pill-magic-reveal {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #ffffff;
 }
 
 .pill-undo {
@@ -452,7 +520,7 @@ html, body {
   color: #ffffff;
 }
 
-/* Colonne Droite ou Bas : Palette de Couleurs Magiques */
+/* Colonne Droite : Palette de Couleurs Magiques */
 .palette-bar {
   width: 115px;
   background: var(--panel-bg);
@@ -465,6 +533,7 @@ html, body {
   box-shadow: var(--shadow-soft);
   border: 3px solid #ffffff;
   overflow-y: auto;
+  touch-action: pan-y;
   flex-shrink: 0;
 }
 
@@ -481,7 +550,7 @@ html, body {
   height: 42px;
   border-radius: 50%;
   border: 4px solid #ffffff;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.22);
   cursor: pointer;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
@@ -503,7 +572,7 @@ html, body {
 }
 
 /* ==========================================
-   MODE 2 : MON MONDE DINO MAGIQUE (SCENE)
+   MODE 2 : MON MONDE DINO & HÉROS (SCENE)
    ========================================== */
 .world-layout {
   width: 100%;
@@ -525,7 +594,6 @@ html, body {
   transition: background 0.5s ease;
 }
 
-/* Décors de fond du monde */
 .world-stage.bg-jungle {
   background: linear-gradient(180deg, #38bdf8 0%, #bae6fd 58%, #4ade80 58%, #16a34a 100%);
 }
@@ -562,7 +630,7 @@ html, body {
 }
 
 .world-actor.selected {
-  filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 8px 12px rgba(124, 58, 237, 0.6));
+  filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 8px 12px rgba(124, 58, 237, 0.65));
   z-index: 20;
 }
 
@@ -572,7 +640,20 @@ html, body {
   transition: transform 0.2s ease;
 }
 
-.world-actor.dancing .actor-emoji {
+.world-actor .actor-img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  border-radius: 20px;
+  border: 4px solid #ffffff;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.world-actor.dancing .actor-emoji,
+.world-actor.dancing .actor-img {
   animation: dinoDance 0.75s infinite alternate ease-in-out;
 }
 
@@ -617,7 +698,7 @@ html, body {
 }
 
 .world-tray {
-  height: 108px;
+  height: 112px;
   background: var(--panel-bg);
   border-radius: 24px;
   border: 3px solid #ffffff;
@@ -627,12 +708,14 @@ html, body {
   gap: 10px;
   padding: 8px 14px;
   overflow-x: auto;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
   flex-shrink: 0;
 }
 
 .spawn-card {
-  min-width: 82px;
-  height: 84px;
+  min-width: 84px;
+  height: 88px;
   border-radius: 18px;
   background: #ffffff;
   border: 3px solid #e5e7eb;
@@ -645,6 +728,7 @@ html, body {
   gap: 3px;
   flex-shrink: 0;
   transition: transform 0.12s;
+  padding: 4px;
 }
 
 .spawn-card:active {
@@ -655,10 +739,19 @@ html, body {
   font-size: 2.2rem;
 }
 
+.spawn-card .spawn-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
 .spawn-card .spawn-label {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: #374151;
+  white-space: nowrap;
 }
 
 /* ==========================================
@@ -734,7 +827,6 @@ html, body {
   animation: pulseGlow 1s infinite alternate;
 }
 
-/* Les Dinos Musiciens sur scène */
 .band-row {
   display: flex;
   justify-content: space-around;
@@ -784,7 +876,6 @@ html, body {
   border-radius: 12px;
 }
 
-/* Clavier Piano Arc-en-Ciel Géant */
 .piano-container {
   height: 170px;
   background: var(--panel-bg);
@@ -850,6 +941,7 @@ html, body {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  touch-action: pan-y;
 }
 
 .gallery-header {
@@ -976,6 +1068,7 @@ html, body {
     align-items: center;
     overflow-x: auto;
     overflow-y: hidden;
+    touch-action: pan-x;
     padding: 8px;
     gap: 8px;
   }
@@ -987,14 +1080,16 @@ html, body {
     gap: 6px;
   }
   .tool-btn, .template-card {
-    min-width: 68px;
-    padding: 6px;
+    min-width: 72px;
+    padding: 5px;
+    flex-shrink: 0;
   }
   .palette-bar {
     width: 100%;
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
+    touch-action: pan-x;
     padding: 8px;
   }
   .palette-bar .section-label {

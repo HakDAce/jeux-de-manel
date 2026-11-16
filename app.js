@@ -1,22 +1,25 @@
 // ============================================================================
-// DINO & MAGIE : L'ATELIER CRÉATIF (6-7 ANS)
-// 100% Tactile - Sans dépendance externe - Web Audio & Synthèse Vocale
+// DINO & HÉROS MAGIQUES : L'ATELIER CRÉATIF (6-7 ANS)
+// 100% Tactile - Personnages intégrés + Dinos - Web Audio & Synthèse Vocale
 // ============================================================================
 
 (() => {
   'use strict';
+
+  const CHAR_IMGS = window.CHARACTER_IMAGES || {};
 
   // --- ÉTAT GLOBAL ---
   const state = {
     mode: 'coloring', // 'coloring' | 'world' | 'music' | 'gallery'
     soundEnabled: true,
     // Coloriage
-    currentTool: 'fill', // 'fill' | 'brush' | 'rainbow' | 'stamp' | 'spray' | 'eraser'
-    currentColor: '#22c55e',
+    currentTool: 'fill', // 'fill' | 'brush' | 'magicreveal' | 'rainbow' | 'stamp' | 'eraser'
+    currentColor: '#38bdf8',
     isRainbowColor: false,
-    brushSize: 22,
+    brushSize: 26,
     currentSticker: '🦖',
-    currentTemplate: 'trex',
+    currentTemplate: 'stitch',
+    isPhotoTemplate: true,
     rainbowHue: 0,
     undoStack: [],
     // Monde Magique
@@ -25,8 +28,8 @@
     actors: [],
     selectedActorId: null,
     // Musique
-    instrument: 'piano', // 'piano' | 'marimba' | 'magic' | 'synth'
-    activeBeat: null,    // null | 'jungle' | 'fairy'
+    instrument: 'piano',
+    activeBeat: null,
     beatInterval: null,
     isRecording: false,
     recordedNotes: [],
@@ -38,31 +41,46 @@
   // Palette de 16 couleurs vives + 1 couleur Arc-en-ciel magique
   const PALETTE = [
     { hex: 'RAINBOW', name: 'Arc-en-ciel Magique' },
-    { hex: '#ef4444', name: 'Rouge Volcan' },
-    { hex: '#f97316', name: 'Orange Feu' },
+    { hex: '#ef4444', name: 'Rouge' },
+    { hex: '#f97316', name: 'Orange' },
     { hex: '#facc15', name: 'Jaune Soleil' },
     { hex: '#84cc16', name: 'Vert Pomme' },
-    { hex: '#22c55e', name: 'Vert Dino' },
-    { hex: '#14b8a6', name: 'Turquoise Magique' },
-    { hex: '#38bdf8', name: 'Bleu Ciel' },
-    { hex: '#3b82f6', name: 'Bleu Océan' },
-    { hex: '#8b5cf6', name: 'Violet Sorcier' },
-    { hex: '#d946ef', name: 'Rose Licorne' },
-    { hex: '#f43f5e', name: 'Rose Bonbon' },
-    { hex: '#a16207', name: 'Marron Terre' },
-    { hex: '#fbbf24', name: 'Or Royal' },
-    { hex: '#475569', name: 'Gris Pierre' },
+    { hex: '#22c55e', name: 'Vert' },
+    { hex: '#14b8a6', name: 'Turquoise Jasmine' },
+    { hex: '#38bdf8', name: 'Bleu Stitch' },
+    { hex: '#2563eb', name: 'Bleu Roi' },
+    { hex: '#8b5cf6', name: 'Violet Raiponce' },
+    { hex: '#d946ef', name: 'Rose Magique' },
+    { hex: '#f43f5e', name: 'Rose Corail' },
+    { hex: '#fdba74', name: 'Beige Peau Douce' },
+    { hex: '#a16207', name: 'Marron Lion' },
+    { hex: '#475569', name: 'Gris / Noir' },
     { hex: '#ffffff', name: 'Blanc Nuage' }
   ];
 
   const STICKERS = [
     '🦖', '🦕', '🦄', '🐉',
-    '🌋', '👑', '⭐', '🌈',
-    '🏰', '🍄', '💎', '💖',
-    '🪄', '🥚', '☄️', '🌴'
+    '🌺', '👑', '⭐', '🌈',
+    '🏰', '❄️', '💎', '💖',
+    '🪄', '🦁', '🧞', '🌴'
   ];
 
+  // Les 14 personnages envoyés + les 5 Dinos/Magie + Toile Libre
   const TEMPLATES = [
+    { id: 'stitch', name: 'Stitch', imgKey: 'stitch' },
+    { id: 'vaiana', name: 'Vaiana', imgKey: 'vaiana' },
+    { id: 'maui', name: 'Maui', imgKey: 'maui' },
+    { id: 'olaf', name: 'Olaf', imgKey: 'olaf' },
+    { id: 'raiponce', name: 'Raiponce', imgKey: 'raiponce' },
+    { id: 'mickey', name: 'Mickey', imgKey: 'mickey' },
+    { id: 'winnie', name: 'Winnie', imgKey: 'winnie' },
+    { id: 'bob', name: 'Bob', imgKey: 'bob' },
+    { id: 'simba_nala', name: 'Simba & Nala', imgKey: 'simba_nala' },
+    { id: 'roi_lion', name: 'Roi Lion', imgKey: 'roi_lion' },
+    { id: 'timon_pumbaa', name: 'Timon & Pumbaa', imgKey: 'timon_pumbaa' },
+    { id: 'jasmine', name: 'Jasmine', imgKey: 'jasmine' },
+    { id: 'aladdin', name: 'Aladdin', imgKey: 'aladdin' },
+    { id: 'jasmine_portrait', name: 'Princesse Jasmine', imgKey: 'jasmine_portrait' },
     { id: 'trex', name: 'Rexy Dino', emoji: '🦖' },
     { id: 'unicorn', name: 'Licorne', emoji: '🦄' },
     { id: 'diplo', name: 'Grand Diplo', emoji: '🦕' },
@@ -72,6 +90,19 @@
   ];
 
   const WORLD_ITEMS = [
+    { imgKey: 'stitch', label: 'Stitch', sound: 'magic' },
+    { imgKey: 'vaiana', label: 'Vaiana', sound: 'magic' },
+    { imgKey: 'maui', label: 'Maui', sound: 'roar' },
+    { imgKey: 'olaf', label: 'Olaf', sound: 'pop' },
+    { imgKey: 'raiponce', label: 'Raiponce', sound: 'chime' },
+    { imgKey: 'mickey', label: 'Mickey', sound: 'pop' },
+    { imgKey: 'winnie', label: 'Winnie', sound: 'low' },
+    { imgKey: 'bob', label: 'Bob', sound: 'pop' },
+    { imgKey: 'simba_nala', label: 'Simba & Nala', sound: 'roar' },
+    { imgKey: 'roi_lion', label: 'Roi Lion', sound: 'roar' },
+    { imgKey: 'timon_pumbaa', label: 'Timon & Pumbaa', sound: 'low' },
+    { imgKey: 'jasmine', label: 'Jasmine', sound: 'chime' },
+    { imgKey: 'aladdin', label: 'Aladdin', sound: 'magic' },
     { emoji: '🦖', label: 'T-Rex', sound: 'roar' },
     { emoji: '🦕', label: 'Diplo', sound: 'low' },
     { emoji: '🦄', label: 'Licorne', sound: 'magic' },
@@ -79,25 +110,22 @@
     { emoji: '🥚', label: 'Œuf Surprise', sound: 'egg' },
     { emoji: '🌋', label: 'Volcan', sound: 'volcano' },
     { emoji: '🏰', label: 'Château', sound: 'magic' },
-    { emoji: '🌈', label: 'Arc-en-ciel', sound: 'magic' },
-    { emoji: '🍄', label: 'Champignon', sound: 'pop' },
-    { emoji: '👑', label: 'Couronne', sound: 'chime' },
-    { emoji: '💎', label: 'Cristal', sound: 'chime' },
-    { emoji: '🌴', label: 'Palmier', sound: 'pop' },
-    { emoji: '☄️', label: 'Comète', sound: 'magic' },
-    { emoji: '🧚', label: 'Petite Fée', sound: 'magic' }
+    { emoji: '🌈', label: 'Arc-en-ciel', sound: 'magic' }
   ];
 
   const PIANO_NOTES = [
     { note: 'Do', freq: 261.63, color: '#ef4444', icon: '🦖' },
-    { note: 'Ré', freq: 293.66, color: '#f97316', icon: '🌋' },
+    { note: 'Ré', freq: 293.66, color: '#f97316', icon: '🦁' },
     { note: 'Mi', freq: 329.63, color: '#eab308', icon: '⭐' },
     { note: 'Fa', freq: 349.23, color: '#22c55e', icon: '🦕' },
-    { note: 'Sol', freq: 392.00, color: '#06b6d4', icon: '💎' },
+    { note: 'Sol', freq: 392.00, color: '#06b6d4', icon: '❄️' },
     { note: 'La', freq: 440.00, color: '#3b82f6', icon: '🏰' },
     { note: 'Si', freq: 493.88, color: '#8b5cf6', icon: '🦄' },
-    { note: 'Do+', freq: 523.25, color: '#ec4899', icon: '🐉' }
+    { note: 'Do+', freq: 523.25, color: '#ec4899', icon: '🌺' }
   ];
+
+  // Cache d'images préchargées
+  const loadedImages = {};
 
   // ==========================================================================
   // 1. MOTEUR AUDIO & VOIX (Web Audio API + SpeechSynthesis)
@@ -126,9 +154,7 @@
       utter.rate = 1.0;
       utter.pitch = 1.15;
       window.speechSynthesis.speak(utter);
-    } catch (_) {
-      // Ignorer si non supporté
-    }
+    } catch (_) {}
   }
 
   function playTone(freq, duration = 0.25, type = 'sine', volume = 0.22, slideFreq = null) {
@@ -253,12 +279,10 @@
     }
   }
 
-  // Navigation entre les 4 écrans
   const modeTabs = document.querySelectorAll('.mode-tab');
   modeTabs.forEach((tab) => {
     tab.addEventListener('pointerdown', () => {
-      const targetMode = tab.dataset.mode;
-      switchMode(targetMode);
+      switchMode(tab.dataset.mode);
     });
   });
 
@@ -276,33 +300,32 @@
     }
 
     if (newMode === 'coloring') {
-      showToast('🎨 Atelier Coloriage & Dessin !');
+      showToast('🎨 Atelier Coloriage & Héros !');
     } else if (newMode === 'world') {
-      showToast('🏰 Crée ton Monde Dino Magique !');
+      showToast('🏰 Crée ton Monde Magique !');
     } else if (newMode === 'music') {
-      showToast('🎹 L’Orchestre des Dinos !');
+      showToast('🎹 L’Orchestre Magique !');
     } else if (newMode === 'gallery') {
       renderGallery();
       showToast('📸 Mon Album Magique !');
     }
   }
 
-  // Boutons Barre du Haut
   document.getElementById('brandBtn').addEventListener('pointerdown', () => {
-    playSoundEffect('roar');
-    speak('Bienvenue dans Dino Magique !');
-    showToast('🦖 Roaaar ! Amuse-toi bien ! ✨');
+    playSoundEffect('magic');
+    speak('Bienvenue dans ton Atelier Magique !');
+    showToast('🦖 Amuse-toi bien avec tes héros préférés ! ✨');
   });
 
   document.getElementById('voiceHelpBtn').addEventListener('pointerdown', () => {
     if (state.mode === 'coloring') {
-      speak('Choisis une couleur à droite, puis touche le dessin avec le pot magique ou dessine avec ton doigt !');
-      showToast('🗣️ Touche une zone pour la colorier !');
+      speak('Choisis ton personnage à gauche ! Utilise le pot magique pour remplir une zone, ou la baguette Vraie Couleur pour révéler les couleurs du dessin animé !');
+      showToast('🗣️ Utilise le Pot 🪣 ou la Baguette 🪄 !');
     } else if (state.mode === 'world') {
-      speak('Touche les dinosaures en bas pour les ajouter, et glisse-les avec ton doigt ! Touche l’œuf pour le faire éclore !');
-      showToast('🗣️ Glisse les dinos et touche l’œuf surprise !');
+      speak('Touche tes héros ou les dinosaures en bas pour les ajouter dans ton monde, et fais-les danser !');
+      showToast('🗣️ Touche un héros en bas pour l’ajouter !');
     } else if (state.mode === 'music') {
-      speak('Joue du piano arc-en-ciel avec tes doigts et touche les dinosaures musiciens !');
+      speak('Joue du piano arc-en-ciel avec tes doigts !');
       showToast('🗣️ Touche les grandes touches colorées !');
     } else {
       speak('Voici toutes tes belles créations enregistrées !');
@@ -333,22 +356,38 @@
   });
 
   // ==========================================================================
-  // 3. MODE 1 : COLORIAGE & DESSIN MAGIQUE (Double Calque + Flood Fill Rapide)
+  // 3. MODE 1 : COLORIAGE & DESSIN MAGIQUE (Héros Photo + Dinos Vectoriels)
   // ==========================================================================
   const paintCanvas = document.getElementById('paintCanvas');
   const ctx = paintCanvas.getContext('2d', { willReadFrequently: true });
 
-  // Calque invisible contenant uniquement les contours noirs du modèle
+  // Calque des contours noirs du coloriage
   const lineCanvas = document.createElement('canvas');
   lineCanvas.width = paintCanvas.width;
   lineCanvas.height = paintCanvas.height;
   const lineCtx = lineCanvas.getContext('2d', { willReadFrequently: true });
 
-  // Calque invisible contenant uniquement la couleur de l'enfant (sous les traits noirs)
+  // Calque de couleur de l'enfant (sous les traits noirs)
   const colorCanvas = document.createElement('canvas');
   colorCanvas.width = paintCanvas.width;
   colorCanvas.height = paintCanvas.height;
   const colorCtx = colorCanvas.getContext('2d', { willReadFrequently: true });
+
+  // Calque de référence contenant l'image couleur originale du personnage
+  // (utilisé pour guider intelligemment le Pot Magique et la Baguette Vraie Couleur !)
+  const refCanvas = document.createElement('canvas');
+  refCanvas.width = paintCanvas.width;
+  refCanvas.height = paintCanvas.height;
+  const refCtx = refCanvas.getContext('2d', { willReadFrequently: true });
+
+  const modelPreviewCard = document.getElementById('modelPreviewCard');
+  const modelPreviewImg = document.getElementById('modelPreviewImg');
+
+  modelPreviewCard.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    modelPreviewCard.classList.toggle('zoomed');
+    playSoundEffect('pop');
+  });
 
   function compositeCanvas() {
     ctx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
@@ -377,7 +416,117 @@
     showToast('↩️ Oups annulé !');
   }
 
-  // --- Dessin des 5 Modèles Vectoriels sur lineCanvas ---
+  // --- Conversion Intelligente d'une Image de Personnage en Page de Coloriage ---
+  function convertRefCanvasToColoringLines() {
+    const w = refCanvas.width;
+    const h = refCanvas.height;
+    const src = refCtx.getImageData(0, 0, w, h).data;
+    const outImg = lineCtx.createImageData(w, h);
+    const dst = outImg.data;
+
+    // Détection de contours multi-canal (Sobel R, G, B + Luminance)
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (y * w + x) * 4;
+
+        const tl = ((y - 1) * w + (x - 1)) * 4;
+        const tc = ((y - 1) * w + x) * 4;
+        const tr = ((y - 1) * w + (x + 1)) * 4;
+        const ml = (y * w + (x - 1)) * 4;
+        const mr = (y * w + (x + 1)) * 4;
+        const bl = ((y + 1) * w + (x - 1)) * 4;
+        const bc = ((y + 1) * w + x) * 4;
+        const br = ((y + 1) * w + (x + 1)) * 4;
+
+        let maxGrad = 0;
+        for (let c = 0; c < 3; c++) {
+          const gx =
+            -src[tl + c] + src[tr + c] -
+            2 * src[ml + c] + 2 * src[mr + c] -
+            src[bl + c] + src[br + c];
+          const gy =
+            -src[tl + c] - 2 * src[tc + c] - src[tr + c] +
+            src[bl + c] + 2 * src[bc + c] + src[br + c];
+          const g = Math.sqrt(gx * gx + gy * gy);
+          if (g > maxGrad) maxGrad = g;
+        }
+
+        const r = src[idx];
+        const g = src[idx + 1];
+        const b = src[idx + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        let lineAlpha = 0;
+
+        // 1. Traits noirs existants dans le dessin animé (ex: yeux, sourire, contours de Stitch/Mickey)
+        if (lum < 62) {
+          lineAlpha = Math.max(lineAlpha, Math.min(255, (68 - lum) * 4.2));
+        }
+
+        // 2. Contours entre deux zones de couleurs (ex: robe de Raiponce, chemise de Winnie, Vaiana)
+        if (maxGrad > 42) {
+          const edgeAlpha = Math.min(255, (maxGrad - 32) * 2.2);
+          if (edgeAlpha > lineAlpha) lineAlpha = edgeAlpha;
+        }
+
+        if (lineAlpha > 20) {
+          dst[idx] = 30;     // #1e1b4b
+          dst[idx + 1] = 27;
+          dst[idx + 2] = 75;
+          dst[idx + 3] = Math.round(lineAlpha);
+        }
+      }
+    }
+
+    lineCtx.putImageData(outImg, 0, 0);
+    // Cadre propre autour de la feuille
+    lineCtx.strokeStyle = '#1e1b4b';
+    lineCtx.lineWidth = 6;
+    lineCtx.strokeRect(3, 3, w - 6, h - 6);
+  }
+
+  function loadCharacterImageTemplate(dataUrl, label) {
+    state.isPhotoTemplate = true;
+    state.undoStack = [];
+
+    const img = new Image();
+    img.onload = () => {
+      // 1. Dessiner le personnage bien centré sur fond blanc dans refCanvas
+      refCtx.fillStyle = '#ffffff';
+      refCtx.fillRect(0, 0, refCanvas.width, refCanvas.height);
+
+      const pad = 28;
+      const availW = refCanvas.width - pad * 2;
+      const availH = refCanvas.height - pad * 2;
+      const scale = Math.min(availW / img.width, availH / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+      const dx = (refCanvas.width - drawW) / 2;
+      const dy = (refCanvas.height - drawH) / 2;
+
+      refCtx.drawImage(img, dx, dy, drawW, drawH);
+
+      // 2. Extraire automatiquement les contours de coloriage dans lineCanvas
+      convertRefCanvasToColoringLines();
+
+      // 3. Initialiser la feuille de coloriage en blanc
+      colorCtx.fillStyle = '#ffffff';
+      colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
+
+      // 4. Afficher la miniature du Modèle Couleur en haut à gauche
+      modelPreviewImg.src = dataUrl;
+      modelPreviewCard.classList.add('visible');
+      modelPreviewCard.classList.remove('zoomed');
+
+      compositeCanvas();
+    };
+    img.src = dataUrl;
+    if (label) {
+      showToast(`🎨 Coloriage : ${label} !`);
+    }
+  }
+
+  // --- Dessin des 5 Modèles Vectoriels Dinos & Magie ---
   function drawTemplateLines(templateId) {
     lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
     if (templateId === 'blank') return;
@@ -388,7 +537,6 @@
     lineCtx.lineCap = 'round';
     lineCtx.lineJoin = 'round';
 
-    // Cadre extérieur fermé pour que le ciel et le sol soient des zones fermées
     lineCtx.strokeRect(3, 3, lineCanvas.width - 6, lineCanvas.height - 6);
 
     if (templateId === 'trex') {
@@ -441,23 +589,18 @@
     c.stroke();
   }
 
-  // Modèle 1 : Rexy le Roi T-Rex + Volcan + Soleil
   function drawTrexTemplate(c) {
-    // Sol et colline
     c.beginPath();
     c.moveTo(3, 520);
     c.quadraticCurveTo(450, 480, 897, 530);
     c.stroke();
 
-    // Soleil en haut à gauche
     c.beginPath();
     c.arc(110, 105, 55, 0, Math.PI * 2);
     c.stroke();
 
-    // Nuage
     drawCloud(c, 420, 95, 1.0);
 
-    // Volcan souriant à droite
     c.beginPath();
     c.moveTo(590, 512);
     c.lineTo(665, 290);
@@ -466,7 +609,6 @@
     c.closePath();
     c.stroke();
 
-    // Coulée de lave sur le volcan (zone fermée)
     c.beginPath();
     c.moveTo(665, 290);
     c.quadraticCurveTo(680, 360, 700, 355);
@@ -475,51 +617,39 @@
     c.closePath();
     c.stroke();
 
-    // Nuage de fumée du volcan
     drawCloud(c, 730, 210, 0.95);
 
-    // Corps principal du T-Rex (grande forme fermée)
     c.beginPath();
-    // Queue
     c.moveTo(190, 440);
     c.quadraticCurveTo(70, 410, 65, 340);
     c.quadraticCurveTo(100, 350, 200, 370);
-    // Dos
     c.quadraticCurveTo(210, 250, 260, 210);
-    // Tête et museau
     c.quadraticCurveTo(240, 120, 330, 115);
     c.lineTo(465, 125);
     c.quadraticCurveTo(510, 135, 500, 195);
     c.quadraticCurveTo(495, 240, 400, 245);
-    // Cou et ventre rond
     c.quadraticCurveTo(455, 310, 435, 425);
-    // Jambe droite
     c.lineTo(445, 505);
     c.lineTo(375, 505);
     c.lineTo(370, 445);
-    // Entre-jambes
     c.lineTo(310, 445);
-    // Jambe gauche
     c.lineTo(305, 505);
     c.lineTo(235, 505);
     c.lineTo(235, 440);
     c.closePath();
     c.stroke();
 
-    // Ventre rayé du T-Rex (zone fermée à colorier)
     c.beginPath();
     c.moveTo(395, 250);
     c.quadraticCurveTo(335, 310, 350, 425);
     c.quadraticCurveTo(435, 420, 435, 340);
     c.closePath();
     c.stroke();
-    // Lignes sur le ventre
     c.beginPath();
     c.moveTo(352, 310); c.lineTo(432, 310);
     c.moveTo(348, 365); c.lineTo(436, 365);
     c.stroke();
 
-    // Petit bras mignon
     c.beginPath();
     c.moveTo(385, 285);
     c.quadraticCurveTo(445, 285, 440, 315);
@@ -527,7 +657,6 @@
     c.closePath();
     c.stroke();
 
-    // Couronne royale sur la tête du T-Rex
     c.beginPath();
     c.moveTo(295, 118);
     c.lineTo(285, 55);
@@ -539,7 +668,6 @@
     c.closePath();
     c.stroke();
 
-    // Crêtes dorsales (3 triangles fermés sur le dos)
     const spikes = [
       [[248, 220], [205, 195], [228, 260]],
       [[225, 270], [175, 255], [208, 320]],
@@ -554,7 +682,6 @@
       c.stroke();
     });
 
-    // Grand œil expressif et sourire
     c.beginPath();
     c.arc(365, 160, 22, 0, Math.PI * 2);
     c.stroke();
@@ -562,30 +689,13 @@
     c.arc(372, 160, 9, 0, Math.PI * 2);
     c.fill();
 
-    // Sourire + 2 petites dents rigolotes
     c.beginPath();
     c.moveTo(390, 205);
     c.quadraticCurveTo(445, 220, 485, 195);
     c.stroke();
-
-    c.beginPath();
-    c.moveTo(415, 209);
-    c.lineTo(425, 230);
-    c.lineTo(438, 211);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(450, 209);
-    c.lineTo(460, 228);
-    c.lineTo(472, 204);
-    c.closePath();
-    c.stroke();
   }
 
-  // Modèle 2 : Stella la Licorne Ailée + Arc-en-ciel + Étoiles
   function drawUnicornTemplate(c) {
-    // Grand Arc-en-ciel en arrière-plan (3 bandes fermées)
     const radii = [380, 340, 300, 260];
     radii.forEach((r) => {
       c.beginPath();
@@ -593,39 +703,30 @@
       c.stroke();
     });
 
-    // Deux gros nuages aux pieds de l'arc-en-ciel
     drawCloud(c, 140, 535, 1.35);
     drawCloud(c, 760, 535, 1.35);
 
-    // Sol féerique
     c.beginPath();
     c.moveTo(3, 560);
     c.lineTo(897, 560);
     c.stroke();
 
-    // Étoiles magiques dans le ciel
     drawStarShape(c, 150, 120, 5, 42, 20);
     drawStarShape(c, 760, 120, 5, 42, 20);
     drawStarShape(c, 450, 85, 5, 34, 16);
 
-    // Corps de la Licorne
     c.beginPath();
-    // Poitrail et jambes
     c.moveTo(350, 330);
     c.quadraticCurveTo(310, 390, 330, 450);
     c.lineTo(320, 545);
     c.lineTo(365, 545);
     c.lineTo(375, 460);
-    // Ventre
     c.lineTo(505, 460);
-    // Jambe arrière
     c.lineTo(515, 545);
     c.lineTo(565, 545);
     c.lineTo(565, 430);
-    // Croupe et dos
     c.quadraticCurveTo(590, 355, 525, 335);
     c.lineTo(410, 335);
-    // Cou et Tête
     c.lineTo(385, 225);
     c.quadraticCurveTo(375, 175, 325, 185);
     c.quadraticCurveTo(255, 200, 255, 245);
@@ -633,42 +734,13 @@
     c.closePath();
     c.stroke();
 
-    // Corne Magique torsadée
     c.beginPath();
     c.moveTo(295, 195);
     c.lineTo(220, 95);
     c.lineTo(335, 182);
     c.closePath();
     c.stroke();
-    // Rayures sur la corne
-    c.beginPath();
-    c.moveTo(272, 165); c.lineTo(308, 155);
-    c.moveTo(250, 135); c.lineTo(282, 128);
-    c.stroke();
 
-    // Crinière arc-en-ciel (3 mèches fermées)
-    c.beginPath();
-    c.moveTo(355, 185);
-    c.quadraticCurveTo(435, 170, 425, 225);
-    c.quadraticCurveTo(400, 240, 372, 225);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(372, 225);
-    c.quadraticCurveTo(455, 225, 440, 275);
-    c.quadraticCurveTo(410, 290, 385, 270);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(385, 270);
-    c.quadraticCurveTo(465, 275, 445, 325);
-    c.quadraticCurveTo(415, 335, 398, 315);
-    c.closePath();
-    c.stroke();
-
-    // Aile féerique sur le dos
     c.beginPath();
     c.moveTo(430, 355);
     c.quadraticCurveTo(450, 230, 565, 235);
@@ -678,178 +750,71 @@
     c.closePath();
     c.stroke();
 
-    // Grande queue touffue (3 mèches à colorier)
-    c.beginPath();
-    c.moveTo(565, 365);
-    c.quadraticCurveTo(680, 320, 690, 405);
-    c.quadraticCurveTo(640, 425, 572, 395);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(572, 395);
-    c.quadraticCurveTo(695, 405, 675, 475);
-    c.quadraticCurveTo(615, 480, 565, 425);
-    c.closePath();
-    c.stroke();
-
-    // Œil doux et sourire
     c.beginPath();
     c.arc(315, 230, 14, 0, Math.PI * 2);
     c.fill();
-    c.beginPath();
-    c.moveTo(272, 260);
-    c.quadraticCurveTo(295, 275, 315, 260);
-    c.stroke();
-
-    // Cœur sur la croupe
-    c.beginPath();
-    c.arc(515, 395, 12, Math.PI, 0, false);
-    c.arc(539, 395, 12, Math.PI, 0, false);
-    c.lineTo(527, 425);
-    c.closePath();
-    c.stroke();
   }
 
-  // Modèle 3 : Diplo le Grand Dinosaure + Palmier + Soleil
   function drawDiploTemplate(c) {
-    // Collines préhistoriques
     c.beginPath();
     c.moveTo(3, 520);
     c.quadraticCurveTo(300, 460, 600, 510);
     c.quadraticCurveTo(760, 535, 897, 495);
     c.stroke();
 
-    // Soleil
     c.beginPath();
     c.arc(780, 110, 58, 0, Math.PI * 2);
     c.stroke();
 
     drawCloud(c, 520, 100, 1.05);
 
-    // Palmier préhistorique à droite
-    // Tronc
     c.beginPath();
-    c.moveTo(715, 515);
-    c.quadraticCurveTo(735, 370, 700, 265);
-    c.lineTo(740, 265);
-    c.quadraticCurveTo(780, 370, 765, 518);
-    c.closePath();
-    c.stroke();
-    // 3 Palmes fermées
-    c.beginPath();
-    c.moveTo(720, 265);
-    c.quadraticCurveTo(610, 210, 585, 275);
-    c.quadraticCurveTo(655, 285, 720, 265);
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(720, 265);
-    c.quadraticCurveTo(720, 165, 825, 195);
-    c.quadraticCurveTo(785, 255, 720, 265);
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(720, 265);
-    c.quadraticCurveTo(840, 240, 865, 315);
-    c.quadraticCurveTo(785, 315, 720, 265);
-    c.stroke();
-
-    // Grand Diplodocus souriant
-    c.beginPath();
-    // Tête et long cou
     c.moveTo(335, 130);
     c.quadraticCurveTo(420, 120, 425, 175);
     c.quadraticCurveTo(425, 215, 355, 205);
-    // Descente du cou jusqu'au poitrail
     c.quadraticCurveTo(340, 320, 385, 375);
-    // Jambe avant
     c.lineTo(385, 515);
     c.lineTo(320, 515);
     c.lineTo(315, 435);
-    // Ventre
     c.lineTo(215, 435);
-    // Jambe arrière
     c.lineTo(210, 515);
     c.lineTo(145, 515);
     c.lineTo(145, 415);
-    // Queue
     c.quadraticCurveTo(60, 415, 45, 335);
     c.quadraticCurveTo(95, 355, 155, 345);
-    // Dos rond
     c.quadraticCurveTo(215, 265, 285, 330);
-    // Remontée du cou
     c.quadraticCurveTo(280, 200, 295, 145);
     c.quadraticCurveTo(305, 130, 335, 130);
     c.closePath();
     c.stroke();
 
-    // Taches rondes à colorier sur le dos du Diplo
     [[215, 345, 28], [265, 375, 22], [175, 380, 18]].forEach(([x, y, r]) => {
       c.beginPath();
       c.arc(x, y, r, 0, Math.PI * 2);
       c.stroke();
     });
 
-    // Œil et grand sourire
     c.beginPath();
     c.arc(360, 160, 12, 0, Math.PI * 2);
     c.fill();
-    c.beginPath();
-    c.moveTo(365, 185);
-    c.quadraticCurveTo(395, 198, 415, 182);
-    c.stroke();
   }
 
-  // Modèle 4 : Drako le Petit Dragon Magique + Château + Cristal
   function drawDragonTemplate(c) {
-    // Sol
     c.beginPath();
     c.moveTo(3, 525);
     c.lineTo(897, 525);
     c.stroke();
 
-    // Tour de Château Féerique à gauche
     c.beginPath();
     c.rect(75, 260, 130, 265);
     c.stroke();
-    // Toit pointu du château
     c.beginPath();
     c.moveTo(60, 260);
     c.lineTo(140, 130);
     c.lineTo(220, 260);
     c.closePath();
     c.stroke();
-    // Porte du château
-    c.beginPath();
-    c.moveTo(110, 525);
-    c.lineTo(110, 430);
-    c.arc(140, 430, 30, Math.PI, 0, false);
-    c.lineTo(170, 525);
-    c.closePath();
-    c.stroke();
 
-    // Cristaux magiques à droite
-    c.beginPath();
-    c.moveTo(730, 525);
-    c.lineTo(715, 380);
-    c.lineTo(755, 330);
-    c.lineTo(790, 380);
-    c.lineTo(775, 525);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(775, 525);
-    c.lineTo(795, 410);
-    c.lineTo(835, 380);
-    c.lineTo(855, 425);
-    c.lineTo(830, 525);
-    c.closePath();
-    c.stroke();
-
-    // Ailes du Dragon (2 grandes ailes à colorier)
-    // Aile gauche
     c.beginPath();
     c.moveTo(410, 300);
     c.lineTo(275, 195);
@@ -859,7 +824,6 @@
     c.closePath();
     c.stroke();
 
-    // Aile droite
     c.beginPath();
     c.moveTo(525, 300);
     c.lineTo(665, 195);
@@ -869,22 +833,14 @@
     c.closePath();
     c.stroke();
 
-    // Corps assis du bébé Dragon
     c.beginPath();
     c.ellipse(470, 395, 85, 120, 0, 0, Math.PI * 2);
     c.stroke();
 
-    // Ventre strié du dragon
     c.beginPath();
     c.ellipse(470, 410, 52, 90, 0, 0, Math.PI * 2);
     c.stroke();
-    c.beginPath();
-    c.moveTo(422, 380); c.lineTo(518, 380);
-    c.moveTo(418, 415); c.lineTo(522, 415);
-    c.moveTo(424, 450); c.lineTo(516, 450);
-    c.stroke();
 
-    // Tête ronde du Dragon (dessinée en blanc puis contour pour masquer le haut du corps)
     c.fillStyle = '#ffffff';
     c.beginPath();
     c.arc(470, 225, 72, 0, Math.PI * 2);
@@ -892,46 +848,20 @@
     c.stroke();
     c.fillStyle = '#1e1b4b';
 
-    // 2 Petites cornes sur la tête
-    c.beginPath();
-    c.moveTo(420, 170);
-    c.lineTo(395, 105);
-    c.lineTo(450, 155);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(520, 170);
-    c.lineTo(545, 105);
-    c.lineTo(490, 155);
-    c.closePath();
-    c.stroke();
-
-    // Yeux et sourire du dragon
     c.beginPath();
     c.arc(442, 215, 11, 0, Math.PI * 2);
     c.arc(498, 215, 11, 0, Math.PI * 2);
     c.fill();
 
-    c.beginPath();
-    c.moveTo(435, 255);
-    c.quadraticCurveTo(470, 280, 505, 255);
-    c.stroke();
-
-    // Étoile magique au-dessus
     drawStarShape(c, 640, 105, 5, 38, 18);
   }
 
-  // Modèle 5 : Tricéra & Champignons Féeriques
   function drawTriceraTemplate(c) {
-    // Sol
     c.beginPath();
     c.moveTo(3, 525);
     c.quadraticCurveTo(450, 495, 897, 525);
     c.stroke();
 
-    // Grand Champignon Magique à gauche
-    // Pied
     c.beginPath();
     c.moveTo(115, 520);
     c.lineTo(130, 350);
@@ -939,33 +869,18 @@
     c.lineTo(205, 520);
     c.closePath();
     c.stroke();
-    // Chapeau
+
     c.beginPath();
     c.moveTo(55, 355);
     c.quadraticCurveTo(160, 195, 265, 355);
     c.closePath();
     c.stroke();
-    // Pois sur le champignon
-    [[125, 315, 20], [185, 300, 16], [155, 335, 14]].forEach(([x, y, r]) => {
-      c.beginPath();
-      c.arc(x, y, r, 0, Math.PI * 2);
-      c.stroke();
-    });
 
-    // Collerette décorative du Tricératops (grande roue festonnée)
     c.beginPath();
     c.arc(465, 275, 115, Math.PI * 0.75, Math.PI * 2.15, false);
     c.closePath();
     c.stroke();
 
-    // Perles autour de la collerette
-    [[385, 210, 16], [435, 180, 16], [495, 180, 16], [545, 215, 16]].forEach(([x, y, r]) => {
-      c.beginPath();
-      c.arc(x, y, r, 0, Math.PI * 2);
-      c.stroke();
-    });
-
-    // Corps du Tricératops
     c.beginPath();
     c.moveTo(530, 330);
     c.quadraticCurveTo(720, 310, 745, 420);
@@ -981,7 +896,6 @@
     c.closePath();
     c.stroke();
 
-    // Tête du Tricératops (remplie en blanc pour cacher la base de la collerette)
     c.fillStyle = '#ffffff';
     c.beginPath();
     c.ellipse(435, 315, 85, 65, 0, 0, Math.PI * 2);
@@ -989,54 +903,31 @@
     c.stroke();
     c.fillStyle = '#1e1b4b';
 
-    // 3 Cornes à colorier
-    // Petite corne du nez
-    c.beginPath();
-    c.moveTo(355, 295);
-    c.lineTo(315, 245);
-    c.lineTo(380, 275);
-    c.closePath();
-    c.stroke();
-    // 2 grandes cornes du front
-    c.beginPath();
-    c.moveTo(410, 260);
-    c.lineTo(350, 175);
-    c.lineTo(440, 252);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(455, 255);
-    c.lineTo(415, 170);
-    c.lineTo(485, 255);
-    c.closePath();
-    c.stroke();
-
-    // Œil et sourire
     c.beginPath();
     c.arc(415, 305, 12, 0, Math.PI * 2);
     c.fill();
-    c.beginPath();
-    c.moveTo(365, 342);
-    c.quadraticCurveTo(405, 365, 445, 342);
-    c.stroke();
-
-    drawCloud(c, 710, 110, 1.0);
-    drawStarShape(c, 260, 110, 5, 35, 16);
   }
 
-  function loadTemplate(templateId) {
-    state.currentTemplate = templateId;
+  function loadTemplate(tpl) {
+    state.currentTemplate = tpl.id;
     state.undoStack = [];
-    // Fond blanc propre sur colorCanvas
+
+    if (tpl.imgKey && CHAR_IMGS[tpl.imgKey]) {
+      loadCharacterImageTemplate(CHAR_IMGS[tpl.imgKey], tpl.name);
+      return;
+    }
+
+    state.isPhotoTemplate = false;
+    modelPreviewCard.classList.remove('visible');
+
     colorCtx.fillStyle = '#ffffff';
     colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
 
-    drawTemplateLines(templateId);
+    drawTemplateLines(tpl.id);
     compositeCanvas();
   }
 
-  // --- Algorithme Pot Magique (Scanline Flood Fill ultra-rapide et sans halo blanc) ---
+  // --- Algorithme Pot Magique Guidé (Fonctionne sur les 14 Héros Photo ET les Dinos !) ---
   function hexToRgba(hex) {
     const clean = hex.replace('#', '');
     const num = parseInt(clean, 16);
@@ -1061,14 +952,13 @@
     const lineData = lineCtx.getImageData(0, 0, w, h).data;
     const colorImg = colorCtx.getImageData(0, 0, w, h);
     const data = colorImg.data;
+    const refData = state.isPhotoTemplate ? refCtx.getImageData(0, 0, w, h).data : null;
 
-    // Vérifier si l'enfant a touché directement sur un trait noir du modèle
     const startIdx = (startY * w + startX) * 4;
-    if (state.currentTemplate !== 'blank' && lineData[startIdx + 3] > 140) {
+    if (state.currentTemplate !== 'blank' && lineData[startIdx + 3] > 210) {
       return false;
     }
 
-    // Couleur de remplissage choisie
     let fillRgba;
     if (state.isRainbowColor) {
       state.rainbowHue = (state.rainbowHue + 45) % 360;
@@ -1080,6 +970,10 @@
     const targetR = data[startIdx];
     const targetG = data[startIdx + 1];
     const targetB = data[startIdx + 2];
+
+    const refR0 = refData ? refData[startIdx] : 0;
+    const refG0 = refData ? refData[startIdx + 1] : 0;
+    const refB0 = refData ? refData[startIdx + 2] : 0;
 
     if (
       Math.abs(targetR - fillRgba[0]) < 8 &&
@@ -1100,11 +994,23 @@
       const pIdx = py * w + px;
       if (visited[pIdx]) return false;
       const idx4 = pIdx * 4;
-      if (hasLines && lineData[idx4 + 3] > 140) return false;
+      if (hasLines && lineData[idx4 + 3] > 185) return false;
+
+      // Vérifier la cohérence sur colorCanvas
       const dr = Math.abs(data[idx4] - targetR);
       const dg = Math.abs(data[idx4 + 1] - targetG);
       const db = Math.abs(data[idx4 + 2] - targetB);
-      return dr + dg + db < 65;
+      if (dr + dg + db > 75) return false;
+
+      // Si c'est une image de personnage, guider le remplissage grâce aux zones de couleur de l'image originale !
+      if (refData) {
+        const rdr = Math.abs(refData[idx4] - refR0);
+        const rdg = Math.abs(refData[idx4 + 1] - refG0);
+        const rdb = Math.abs(refData[idx4 + 2] - refB0);
+        if (rdr + rdg + rdb > 120) return false;
+      }
+
+      return true;
     }
 
     while (stack.length > 0) {
@@ -1112,15 +1018,11 @@
       const x = stack.pop();
       let lx = x;
 
-      while (lx >= 0 && canFill(lx, y)) {
-        lx--;
-      }
+      while (lx >= 0 && canFill(lx, y)) lx--;
       lx++;
 
       let rx = x;
-      while (rx < w && canFill(rx, y)) {
-        rx++;
-      }
+      while (rx < w && canFill(rx, y)) rx++;
       rx--;
 
       let spanAbove = false;
@@ -1154,25 +1056,18 @@
       }
     }
 
-    // Dilatation de 1 pixel sous les contours noirs pour éliminer tout liseré blanc d'anti-aliasing
+    // Dilatation de 1 pixel sous les contours pour un rendu net sans bord blanc
     if (hasLines) {
       for (let y = 1; y < h - 1; y++) {
         for (let x = 1; x < w - 1; x++) {
           const pIdx = y * w + x;
           if (!visited[pIdx]) {
-            if (
-              visited[pIdx - 1] ||
-              visited[pIdx + 1] ||
-              visited[pIdx - w] ||
-              visited[pIdx + w]
-            ) {
+            if (visited[pIdx - 1] || visited[pIdx + 1] || visited[pIdx - w] || visited[pIdx + w]) {
               const idx4 = pIdx * 4;
-              if (lineData[idx4 + 3] > 30) {
-                data[idx4] = fillRgba[0];
-                data[idx4 + 1] = fillRgba[1];
-                data[idx4 + 2] = fillRgba[2];
-                data[idx4 + 3] = 255;
-              }
+              data[idx4] = fillRgba[0];
+              data[idx4 + 1] = fillRgba[1];
+              data[idx4 + 2] = fillRgba[2];
+              data[idx4 + 3] = 255;
             }
           }
         }
@@ -1184,7 +1079,7 @@
     return true;
   }
 
-  // --- Interactions Tactiles sur la Toile (Pot, Pinceau, Arc-en-ciel, Tampon, Paillettes, Gomme) ---
+  // --- Interactions Tactiles sur la Toile ---
   let isDrawing = false;
   let lastPt = null;
 
@@ -1219,7 +1114,7 @@
     if (state.currentTool === 'stamp') {
       saveUndoState();
       colorCtx.save();
-      colorCtx.font = `${state.brushSize * 2.4 + 28}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+      colorCtx.font = `${state.brushSize * 2.2 + 28}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
       colorCtx.textAlign = 'center';
       colorCtx.textBaseline = 'middle';
       colorCtx.fillText(state.currentSticker, pt.x, pt.y);
@@ -1230,7 +1125,6 @@
       return;
     }
 
-    // Outils de tracé continu : brush, rainbow, spray, eraser
     saveUndoState();
     isDrawing = true;
     lastPt = pt;
@@ -1265,30 +1159,23 @@
       colorCtx.moveTo(from.x, from.y);
       colorCtx.lineTo(to.x, to.y);
       colorCtx.stroke();
-    } else if (state.currentTool === 'rainbow' || state.isRainbowColor) {
+    } else if (state.currentTool === 'magicreveal' && state.isPhotoTemplate) {
+      // Baguette Magique : révèle les vraies couleurs originales du personnage sous le doigt !
+      const pattern = colorCtx.createPattern(refCanvas, 'no-repeat');
+      colorCtx.strokeStyle = pattern;
+      colorCtx.lineWidth = state.brushSize * 1.45;
+      colorCtx.beginPath();
+      colorCtx.moveTo(from.x, from.y);
+      colorCtx.lineTo(to.x, to.y);
+      colorCtx.stroke();
+    } else if (state.currentTool === 'rainbow' || state.isRainbowColor || state.currentTool === 'magicreveal') {
       state.rainbowHue = (state.rainbowHue + 7) % 360;
       colorCtx.strokeStyle = `hsl(${state.rainbowHue}, 92%, 56%)`;
       colorCtx.beginPath();
       colorCtx.moveTo(from.x, from.y);
       colorCtx.lineTo(to.x, to.y);
       colorCtx.stroke();
-    } else if (state.currentTool === 'spray') {
-      // Paillettes magiques
-      for (let i = 0; i < 6; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * state.brushSize * 1.3;
-        const sx = to.x + Math.cos(angle) * radius;
-        const sy = to.y + Math.sin(angle) * radius;
-        state.rainbowHue = (state.rainbowHue + 23) % 360;
-        colorCtx.fillStyle = state.isRainbowColor
-          ? `hsl(${state.rainbowHue}, 95%, 60%)`
-          : state.currentColor;
-        colorCtx.beginPath();
-        colorCtx.arc(sx, sy, Math.random() * 4 + 2, 0, Math.PI * 2);
-        colorCtx.fill();
-      }
     } else {
-      // Pinceau doux classique
       colorCtx.strokeStyle = state.currentColor;
       colorCtx.beginPath();
       colorCtx.moveTo(from.x, from.y);
@@ -1302,7 +1189,6 @@
 
   // --- Initialisation des contrôles du Mode Coloriage ---
   function initColoringUI() {
-    // Palette de couleurs
     const swatchesContainer = document.getElementById('colorSwatches');
     PALETTE.forEach((col) => {
       const btn = document.createElement('button');
@@ -1328,8 +1214,7 @@
           state.currentColor = col.hex;
           playSoundEffect('pop');
         }
-        // Si l'enfant était sur la gomme, repasser sur le pinceau ou le pot
-        if (state.currentTool === 'eraser') {
+        if (state.currentTool === 'eraser' || state.currentTool === 'magicreveal') {
           selectTool('fill');
         }
       });
@@ -1337,14 +1222,16 @@
       swatchesContainer.appendChild(btn);
     });
 
-    // Outils
     document.querySelectorAll('.tool-btn').forEach((btn) => {
       btn.addEventListener('pointerdown', () => {
         selectTool(btn.dataset.tool);
+        if (btn.dataset.tool === 'magicreveal') {
+          playSoundEffect('magic');
+          showToast('🪄 Frotte le dessin avec ton doigt pour révéler ses vraies couleurs !');
+        }
       });
     });
 
-    // Tailles de pinceau
     document.querySelectorAll('.size-btn').forEach((btn) => {
       btn.addEventListener('pointerdown', () => {
         document.querySelectorAll('.size-btn').forEach((b) => b.classList.remove('active'));
@@ -1354,7 +1241,6 @@
       });
     });
 
-    // Tampons (Stickers)
     const stickerGrid = document.getElementById('stickerGrid');
     STICKERS.forEach((st, idx) => {
       const item = document.createElement('button');
@@ -1369,23 +1255,51 @@
       stickerGrid.appendChild(item);
     });
 
-    // Modèles de dessin
+    // Grille des 20 modèles + bouton Importer Photo
     const templateGrid = document.getElementById('templateGrid');
+    const customInput = document.getElementById('customImageInput');
+
+    // Bouton pour ajouter n'importe quelle nouvelle photo depuis la tablette
+    const uploadCard = document.createElement('button');
+    uploadCard.className = 'template-card';
+    uploadCard.style.borderColor = '#a855f7';
+    uploadCard.style.background = '#faf5ff';
+    uploadCard.innerHTML = `<span class="tpl-emoji">➕</span><span>Ma Photo</span>`;
+    uploadCard.addEventListener('Click', () => customInput.click());
+    uploadCard.addEventListener('pointerdown', () => customInput.click());
+    templateGrid.appendChild(uploadCard);
+
+    customInput.addEventListener('change', (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
+        uploadCard.classList.add('active');
+        state.currentTemplate = 'custom';
+        loadCharacterImageTemplate(reader.result, 'Ma Photo');
+        playSoundEffect('magic');
+      };
+      reader.readAsDataURL(file);
+    });
+
     TEMPLATES.forEach((tpl, idx) => {
       const card = document.createElement('button');
       card.className = 'template-card' + (idx === 0 ? ' active' : '');
-      card.innerHTML = `<span class="tpl-emoji">${tpl.emoji}</span><span>${tpl.name}</span>`;
+      if (tpl.imgKey && CHAR_IMGS[tpl.imgKey]) {
+        card.innerHTML = `<img class="tpl-thumb" src="${CHAR_IMGS[tpl.imgKey]}" alt="${tpl.name}" /><span>${tpl.name}</span>`;
+      } else {
+        card.innerHTML = `<span class="tpl-emoji">${tpl.emoji}</span><span>${tpl.name}</span>`;
+      }
       card.addEventListener('pointerdown', () => {
         document.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
         card.classList.add('active');
-        loadTemplate(tpl.id);
+        loadTemplate(tpl);
         playSoundEffect('magic');
-        showToast(`${tpl.emoji} Modèle : ${tpl.name}`);
       });
       templateGrid.appendChild(card);
     });
 
-    // Boutons Oups / Recommencer / Sauvegarder
     document.getElementById('undoBtn').addEventListener('pointerdown', restoreUndoState);
     document.getElementById('clearBtn').addEventListener('pointerdown', () => {
       saveUndoState();
@@ -1396,11 +1310,12 @@
       showToast('🔄 Dessin tout propre !');
     });
     document.getElementById('saveDrawingBtn').addEventListener('pointerdown', (e) => {
-      saveCanvasToGallery(paintCanvas.toDataURL('image/png'), 'Dessin Magique');
+      saveCanvasToGallery(paintCanvas.toDataURL('image/png'), 'Coloriage Magique');
       spawnFloatingBurst(e.clientX, e.clientY, ['📸', '🌟', '🎉', '🦖']);
     });
 
-    loadTemplate('trex');
+    // Charger Stitch par défaut !
+    loadTemplate(TEMPLATES[0]);
   }
 
   function selectTool(toolName) {
@@ -1414,7 +1329,7 @@
   }
 
   // ==========================================================================
-  // 4. MODE 2 : MON MONDE DINO MAGIQUE (Scène Interactive Tactile)
+  // 4. MODE 2 : MON MONDE DINO & HÉROS (Scène Interactive Tactile)
   // ==========================================================================
   const worldStage = document.getElementById('worldStage');
   const worldActorsLayer = document.getElementById('worldActorsLayer');
@@ -1424,14 +1339,17 @@
     WORLD_ITEMS.forEach((item) => {
       const card = document.createElement('button');
       card.className = 'spawn-card';
-      card.innerHTML = `<span class="spawn-emoji">${item.emoji}</span><span class="spawn-label">${item.label}</span>`;
+      if (item.imgKey && CHAR_IMGS[item.imgKey]) {
+        card.innerHTML = `<img class="spawn-thumb" src="${CHAR_IMGS[item.imgKey]}" alt="${item.label}" /><span class="spawn-label">${item.label}</span>`;
+      } else {
+        card.innerHTML = `<span class="spawn-emoji">${item.emoji}</span><span class="spawn-label">${item.label}</span>`;
+      }
       card.addEventListener('pointerdown', () => {
-        spawnWorldActor(item.emoji, item.sound);
+        spawnWorldActor(item);
       });
       tray.appendChild(card);
     });
 
-    // Choix du décor de fond
     document.querySelectorAll('.world-bg-picker .bg-chip').forEach((chip) => {
       chip.addEventListener('pointerdown', () => {
         document.querySelectorAll('.world-bg-picker .bg-chip').forEach((c) => c.classList.remove('active'));
@@ -1442,7 +1360,6 @@
       });
     });
 
-    // Bouton Faire Danser !
     const danceBtn = document.getElementById('worldDanceBtn');
     danceBtn.addEventListener('pointerdown', () => {
       state.worldDancing = !state.worldDancing;
@@ -1452,13 +1369,12 @@
       if (state.worldDancing) {
         playSoundEffect('magic');
         speak('Tout le monde danse !');
-        showToast('💃 Youpi ! Les dinos dansent !');
+        showToast('💃 Youpi ! Tout le monde danse !');
       } else {
         playSoundEffect('pop');
       }
     });
 
-    // Outils d'édition du personnage sélectionné
     document.getElementById('actorBiggerBtn').addEventListener('pointerdown', () => modifySelectedActor('scale', 0.22));
     document.getElementById('actorSmallerBtn').addEventListener('pointerdown', () => modifySelectedActor('scale', -0.22));
     document.getElementById('actorFlipBtn').addEventListener('pointerdown', () => modifySelectedActor('flip'));
@@ -1469,18 +1385,28 @@
       spawnFloatingBurst(e.clientX, e.clientY, ['📸', '🏰', '🦖', '🌟']);
     });
 
-    // Ajouter 3 éléments au démarrage pour que la scène soit déjà vivante
-    spawnWorldActor('🏰', 'magic', 22, 52, 1.35, true);
-    spawnWorldActor('🦖', 'roar', 48, 68, 1.15, true);
-    spawnWorldActor('🥚', 'egg', 72, 72, 1.0, true);
+    // Personnages présents au démarrage
+    spawnWorldActor({ imgKey: 'stitch', label: 'Stitch', sound: 'magic' }, 28, 65, 1.05, true);
+    spawnWorldActor({ emoji: '🦖', label: 'T-Rex', sound: 'roar' }, 54, 68, 1.15, true);
+    spawnWorldActor({ emoji: '🥚', label: 'Œuf Surprise', sound: 'egg' }, 76, 72, 1.0, true);
   }
 
-  function spawnWorldActor(emoji, sound, xPct = null, yPct = null, scale = 1, silent = false) {
+  function spawnWorldActor(item, xPct = null, yPct = null, scale = 1, silent = false) {
     const id = 'actor_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const imgSrc = item.imgKey && CHAR_IMGS[item.imgKey] ? CHAR_IMGS[item.imgKey] : null;
+
+    if (imgSrc && !loadedImages[item.imgKey]) {
+      const im = new Image();
+      im.src = imgSrc;
+      loadedImages[item.imgKey] = im;
+    }
+
     const actor = {
       id,
-      emoji,
-      sound,
+      emoji: item.emoji || null,
+      imgKey: item.imgKey || null,
+      imgSrc,
+      sound: item.sound || 'pop',
       x: xPct !== null ? xPct : 25 + Math.random() * 50,
       y: yPct !== null ? yPct : 45 + Math.random() * 35,
       scale,
@@ -1491,10 +1417,13 @@
     const el = document.createElement('div');
     el.className = 'world-actor' + (state.worldDancing ? ' dancing' : '');
     el.id = id;
-    el.innerHTML = `<div class="actor-emoji">${actor.emoji}</div>`;
+    if (actor.imgSrc) {
+      el.innerHTML = `<img class="actor-img" src="${actor.imgSrc}" alt="" />`;
+    } else {
+      el.innerHTML = `<div class="actor-emoji">${actor.emoji}</div>`;
+    }
     updateActorDOM(actor, el);
 
-    // Glisser-déposer tactile + interaction spéciale (Œuf qui éclot, Volcan qui crache des étoiles)
     let startX = 0;
     let startY = 0;
     let moved = false;
@@ -1523,16 +1452,23 @@
 
     el.addEventListener('pointerup', (e) => {
       if (!moved) {
-        // Interaction surprise quand l'enfant tapote un œuf ou un volcan !
         if (actor.emoji === '🥚') {
-          const babies = ['🦖', '🦕', '🐉', '🦄'];
-          actor.emoji = babies[Math.floor(Math.random() * babies.length)];
-          actor.sound = 'magic';
-          el.querySelector('.actor-emoji').textContent = actor.emoji;
+          const surprises = ['stitch', 'olaf', 'winnie', 'simba_nala'];
+          const pick = surprises[Math.floor(Math.random() * surprises.length)];
+          if (CHAR_IMGS[pick]) {
+            actor.emoji = null;
+            actor.imgKey = pick;
+            actor.imgSrc = CHAR_IMGS[pick];
+            el.innerHTML = `<img class="actor-img" src="${actor.imgSrc}" alt="" />`;
+            updateActorDOM(actor, el);
+          } else {
+            actor.emoji = '🦖';
+            el.querySelector('.actor-emoji').textContent = '🦖';
+          }
           playSoundEffect('magic');
           speak('Oh ! L’œuf magique a éclos !');
-          showToast(`🐣 Surprise ! Un bébé ${actor.emoji} est né !`);
-          spawnFloatingBurst(e.clientX, e.clientY, ['🐣', '✨', '🌟', actor.emoji]);
+          showToast('🐣 Surprise ! Regarde qui est sorti de l’œuf !');
+          spawnFloatingBurst(e.clientX, e.clientY, ['🐣', '✨', '🌟', '🎉']);
         } else if (actor.emoji === '🌋') {
           playSoundEffect('volcano');
           spawnFloatingBurst(e.clientX, e.clientY - 30, ['🔥', '☄️', '✨', '🌋']);
@@ -1543,7 +1479,7 @@
     worldActorsLayer.appendChild(el);
     selectActor(actor.id);
     if (!silent) {
-      playSoundEffect(sound || 'pop');
+      playSoundEffect(actor.sound || 'pop');
     }
   }
 
@@ -1551,9 +1487,11 @@
     if (!el) return;
     el.style.left = `${actor.x}%`;
     el.style.top = `${actor.y}%`;
-    const emojiEl = el.querySelector('.actor-emoji');
-    const flipScale = actor.flip ? -actor.scale : actor.scale;
-    emojiEl.style.transform = `scale(${flipScale}, ${actor.scale})`;
+    const inner = el.querySelector('.actor-emoji, .actor-img');
+    if (inner) {
+      const flipScale = actor.flip ? -actor.scale : actor.scale;
+      inner.style.transform = `scale(${flipScale}, ${actor.scale})`;
+    }
   }
 
   function selectActor(id) {
@@ -1593,7 +1531,6 @@
     snap.height = 600;
     const sCtx = snap.getContext('2d');
 
-    // Dessiner le ciel et le sol selon state.worldBg
     const grad = sCtx.createLinearGradient(0, 0, 0, 600);
     if (state.worldBg === 'bg-magic') {
       grad.addColorStop(0, '#c084fc');
@@ -1619,25 +1556,28 @@
     sCtx.fillStyle = grad;
     sCtx.fillRect(0, 0, 900, 600);
 
-    // Soleil
     sCtx.fillStyle = '#fde047';
     sCtx.beginPath();
     sCtx.arc(790, 90, 48, 0, Math.PI * 2);
     sCtx.fill();
 
-    // Dessiner tous les personnages
     sCtx.textAlign = 'center';
     sCtx.textBaseline = 'middle';
     state.actors.forEach((a) => {
       sCtx.save();
       sCtx.translate((a.x / 100) * 900, (a.y / 100) * 600);
       sCtx.scale(a.flip ? -a.scale : a.scale, a.scale);
-      sCtx.font = '72px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-      sCtx.fillText(a.emoji, 0, 0);
+      if (a.imgKey && loadedImages[a.imgKey]) {
+        const im = loadedImages[a.imgKey];
+        sCtx.drawImage(im, -55, -55, 110, 110);
+      } else if (a.emoji) {
+        sCtx.font = '72px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+        sCtx.fillText(a.emoji, 0, 0);
+      }
       sCtx.restore();
     });
 
-    saveCanvasToGallery(snap.toDataURL('image/png'), 'Monde Dino');
+    saveCanvasToGallery(snap.toDataURL('image/png'), 'Monde Magique');
   }
 
   // ==========================================================================
@@ -1667,7 +1607,6 @@
       pianoContainer.appendChild(key);
     });
 
-    // Sélection d'instrument
     document.querySelectorAll('.inst-btn').forEach((btn) => {
       btn.addEventListener('pointerdown', () => {
         document.querySelectorAll('.inst-btn').forEach((b) => b.classList.remove('active'));
@@ -1677,7 +1616,6 @@
       });
     });
 
-    // Les 4 Dinos Musiciens sur scène
     document.querySelectorAll('.dino-musician').forEach((musician) => {
       musician.addEventListener('pointerdown', (e) => {
         musician.classList.add('playing');
@@ -1696,7 +1634,6 @@
       });
     });
 
-    // Boucles rythmiques
     document.querySelectorAll('.beat-btn[data-beat]').forEach((btn) => {
       btn.addEventListener('pointerdown', () => {
         const beat = btn.dataset.beat;
@@ -1708,7 +1645,6 @@
       });
     });
 
-    // Enregistreur de chanson
     const recordBtn = document.getElementById('recordSongBtn');
     const playBtn = document.getElementById('playSongBtn');
 
@@ -1734,7 +1670,7 @@
 
     playBtn.addEventListener('pointerdown', () => {
       if (state.recordedNotes.length === 0) return;
-      showToast('🎶 Concert des Dinos en cours !');
+      showToast('🎶 Concert Magique en cours !');
       const keys = document.querySelectorAll('.piano-key');
       state.recordedNotes.forEach((item) => {
         setTimeout(() => {
@@ -1754,7 +1690,6 @@
     keyEl.classList.add('pressed');
     setTimeout(() => keyEl.classList.remove('pressed'), 180);
 
-    // Faire danser un dino musicien correspondant
     const musicians = document.querySelectorAll('.dino-musician');
     const m = musicians[index % musicians.length];
     if (m) {
@@ -1826,7 +1761,6 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.gallery.slice(0, 20)));
     } catch (_) {
-      // Si quota atteint, garder les plus récents
       state.gallery = state.gallery.slice(0, 8);
     }
     updateGalleryBadge();
@@ -1873,7 +1807,7 @@
         <div class="gallery-card-footer">
           <span style="font-weight:800; font-size:0.85rem;">${item.title} (${item.date})</span>
           <div style="display:flex; gap:6px;">
-            <a href="${item.dataUrl}" download="dino-magique-${item.id}.png" class="bg-chip" style="text-decoration:none;">⬇️</a>
+            <a href="${item.dataUrl}" download="atelier-magique-${item.id}.png" class="bg-chip" style="text-decoration:none;">⬇️</a>
             <button class="bg-chip btn-del-img" style="background:#fee2e2;">🗑️</button>
           </div>
         </div>

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#7c3aed" />
-  <title>Dino & Magie : L'Atelier Créatif (6-7 ans)</title>
+  <title>Dino & Héros Magiques : L'Atelier Créatif (6-7 ans)</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -15,9 +15,9 @@
   <div id="app">
     <!-- BARRE DE NAVIGATION PRINCIPALE -->
     <header class="top-nav">
-      <div class="brand" id="brandBtn" title="Dino & Magie">
+      <div class="brand" id="brandBtn" title="Dino & Héros Magiques">
         <span class="brand-icon">🦖</span>
-        <span class="brand-text">Dino Magique</span>
+        <span class="brand-text">Atelier Magique</span>
       </div>
 
       <nav class="mode-tabs" aria-label="Activités">
@@ -63,6 +63,10 @@
               <span class="tool-icon">🖌️</span>
               <span class="tool-name">Pinceau</span>
             </button>
+            <button class="tool-btn" data-tool="magicreveal">
+              <span class="tool-icon">🪄</span>
+              <span class="tool-name">Vraie Couleur</span>
+            </button>
             <button class="tool-btn" data-tool="rainbow">
               <span class="tool-icon">🌈</span>
               <span class="tool-name">Arc-en-ciel</span>
@@ -70,10 +74,6 @@
             <button class="tool-btn" data-tool="stamp">
               <span class="tool-icon">⭐</span>
               <span class="tool-name">Tampons</span>
-            </button>
-            <button class="tool-btn" data-tool="spray">
-              <span class="tool-icon">✨</span>
-              <span class="tool-name">Paillettes</span>
             </button>
             <button class="tool-btn" data-tool="eraser">
               <span class="tool-icon">🧽</span>
@@ -83,13 +83,13 @@
 
           <div class="section-label">Taille du trait</div>
           <div class="size-row">
-            <button class="size-btn" data-size="10" title="Petit">
+            <button class="size-btn" data-size="12" title="Petit">
               <span class="size-dot" style="width: 10px; height: 10px;"></span>
             </button>
-            <button class="size-btn active" data-size="22" title="Moyen">
+            <button class="size-btn active" data-size="26" title="Moyen">
               <span class="size-dot" style="width: 18px; height: 18px;"></span>
             </button>
-            <button class="size-btn" data-size="40" title="Géant">
+            <button class="size-btn" data-size="46" title="Géant">
               <span class="size-dot" style="width: 28px; height: 28px;"></span>
             </button>
           </div>
@@ -102,7 +102,8 @@
             </div>
           </div>
 
-          <div class="section-label">Dessins à colorier</div>
+          <div class="section-label">Personnages & Dinos</div>
+          <input type="file" id="customImageInput" accept="image/*" style="display:none;" />
           <div class="template-grid" id="templateGrid">
             <!-- Généré par JS -->
           </div>
@@ -112,6 +113,12 @@
         <main class="canvas-area">
           <div class="canvas-wrapper" id="canvasWrapper">
             <canvas id="paintCanvas" width="900" height="650"></canvas>
+
+            <!-- Carte Modèle Couleur en haut à gauche (cliquable pour agrandir) -->
+            <div class="model-preview-card" id="modelPreviewCard" title="Touche pour agrandir ou réduire le modèle">
+              <img id="modelPreviewImg" src="" alt="Modèle couleur" />
+              <span>👀 Modèle (Toucher)</span>
+            </div>
 
             <div class="canvas-floating-actions">
               <button class="action-pill pill-undo" id="undoBtn" title="Annuler le dernier geste">
@@ -138,23 +145,20 @@
     </section>
 
     <!-- ==========================================
-         ECRAN 2 : MON MONDE DINO MAGIQUE (SCENE)
+         ECRAN 2 : MON MONDE DINO & HÉROS (SCENE)
          ========================================== -->
     <section class="screen" id="screen-world">
       <div class="world-layout">
         <div class="world-stage bg-jungle" id="worldStage">
           <!-- Décor SVG en arrière-plan -->
           <svg class="world-scenery-svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
-            <!-- Soleil / Lune -->
             <circle id="worldSun" cx="880" cy="95" r="55" fill="#fde047" opacity="0.9" />
-            <!-- Nuages doux -->
             <g fill="rgba(255,255,255,0.75)">
               <ellipse cx="180" cy="95" rx="70" ry="30" />
               <ellipse cx="220" cy="80" rx="50" ry="32" />
               <ellipse cx="560" cy="115" rx="85" ry="28" />
               <ellipse cx="600" cy="98" rx="55" ry="30" />
             </g>
-            <!-- Collines douces -->
             <path d="M0,360 Q250,270 520,360 T1000,340 L1000,600 L0,600 Z" fill="rgba(0,0,0,0.08)" />
             <path d="M0,430 Q350,370 700,430 T1000,410 L1000,600 L0,600 Z" fill="rgba(255,255,255,0.12)" />
           </svg>
@@ -182,7 +186,7 @@
           <div id="worldActorsLayer"></div>
         </div>
 
-        <!-- Tiroir du bas : Personnages et Objets Magiques à toucher pour ajouter -->
+        <!-- Tiroir du bas : Héros, Dinosaures et Objets Magiques -->
         <div class="world-tray" id="worldTray">
           <!-- Généré par JS -->
         </div>
@@ -211,7 +215,6 @@
             </div>
           </div>
 
-          <!-- Les 4 Dinos Musiciens (Toucher pour jouer un accord/effet rigolo) -->
           <div class="band-row">
             <div class="dino-musician" data-member="rex">
               <div class="musician-avatar">🦖</div>
@@ -232,7 +235,6 @@
           </div>
         </div>
 
-        <!-- Clavier Géant 8 Notes Arc-en-Ciel -->
         <div class="piano-container" id="pianoContainer">
           <!-- Généré par JS -->
         </div>
@@ -256,10 +258,10 @@
       </div>
     </section>
 
-    <!-- Message Toast -->
     <div class="toast-msg" id="toastMsg">Bravo ! 🌟</div>
   </div>
 
+  <script src="characters-data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
