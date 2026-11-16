@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#38bdf8" />
+  <title>Monde de blocs</title>
+  <link rel="manifest" href="../manifest.json" />
+  <link rel="stylesheet" href="blocs.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="touch"></div>
+  <div id="flash"></div>
+  <div id="loading">🧱 Chargement du monde...</div>
+
+  <!-- Commandes de jeu -->
+  <div id="stick"><div id="stickKnob"></div></div>
+  <button id="jumpBtn" aria-label="Sauter">⬆️<span>Saute</span></button>
+
+  <div id="hud">
+    <button id="homeBtn" class="round" aria-label="Menu">🏠</button>
+    <div id="hudText"></div>
+    <button id="soundBtn" class="round" aria-label="Son">🔊</button>
+  </div>
+
+  <!-- Barre de construction -->
+  <div id="buildBar">
+    <div class="bb-tools">
+      <button data-tool="place" class="active">🧱<span>Poser</span></button>
+      <button data-tool="remove">⛏️<span>Enlever</span></button>
+      <button data-tool="paint">🖌️<span>Peindre</span></button>
+      <button id="buildUndo">↩️<span>Oups</span></button>
+      <button id="buildHouse">🏠<span>Maison</span></button>
+      <button id="buildClear">🧹<span>Effacer</span></button>
+      <button id="buildWalk" class="walk">🚶<span>Me promener</span></button>
+    </div>
+    <div id="buildPalette"></div>
+  </div>
+
+  <!-- Menu principal -->
+  <section id="menu" class="screen">
+    <div class="panel">
+      <a class="back-atelier" href="../index.html">⬅ Atelier Magique</a>
+      <h1>🧱 Monde de blocs</h1>
+      <div class="star-total"></div>
+      <button class="big-card c1" id="playParcours"><span class="bc-emoji">🏃</span><span class="bc-title">Parcours</span><span class="bc-sub">Saute jusqu’au drapeau !</span></button>
+      <button class="big-card c2" id="playMonde"><span class="bc-emoji">🏝️</span><span class="bc-title">Petit monde</span><span class="bc-sub">Gemmes, coffres et animaux</span></button>
+      <button class="big-card c3" id="playBuild"><span class="bc-emoji">🏗️</span><span class="bc-title">Construction</span><span class="bc-sub">Construis ta maison</span></button>
+      <button class="perso-btn" id="openPerso">👕 Mon perso</button>
+    </div>
+  </section>
+
+  <!-- Choix du niveau -->
+  <section id="levels" class="screen">
+    <div class="panel">
+      <button class="back-menu">⬅ Retour</button>
+      <h2>🏃 Choisis ton niveau</h2>
+      <div id="levelList"></div>
+    </div>
+  </section>
+
+  <!-- Mon perso -->
+  <section id="perso" class="screen">
+    <div class="panel">
+      <button class="back-menu">⬅ Retour</button>
+      <h2>👕 Mon perso <span class="star-total small"></span></h2>
+      <div class="p-label">T-shirt</div><div class="swatches" id="shirtColors"></div>
+      <div class="p-label">Pantalon</div><div class="swatches" id="pantsColors"></div>
+      <div class="p-label">Peau</div><div class="swatches" id="skinColors"></div>
+      <div class="p-label">Cheveux</div><div class="swatches" id="hairColors"></div>
+      <div class="p-label">Chapeau</div><div class="hats" id="hatList"></div>
+      <p class="p-hint">Gagne des étoiles ⭐ (pièces, gemmes, coffres, niveaux) pour ouvrir les chapeaux.</p>
+    </div>
+  </section>
+
+  <!-- Question (porte, coffre) -->
+  <div id="question" class="modal">
+    <div class="modal-card">
+      <div class="q-title"></div>
+      <div class="q-calc"></div>
+      <div class="q-answers"></div>
+    </div>
+  </div>
+
+  <!-- Fête -->
+  <div id="celebrate" class="modal">
+    <div class="modal-card">
+      <div class="c-stars"></div>
+      <div class="c-title"></div>
+      <div class="c-text"></div>
+      <div class="c-buttons"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="jeu.js"></script>
+</body>
+</html>

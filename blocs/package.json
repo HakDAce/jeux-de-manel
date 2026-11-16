@@ -1,0 +1,12 @@
+{
+  "name": "monde-de-blocs",
+  "private": true,
+  "description": "Jeu 3D en blocs de l'Atelier Magique. Les sources sont dans src/, le jeu construit est jeu.js.",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=jeu.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "0.187.0"
+  }
+}
