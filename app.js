@@ -236,6 +236,18 @@
 
   function showToast(msg) {
     toastEl.textContent = msg;
+    // En coloriage, le message reste dans la feuille : il ne cache ni les couleurs ni les outils
+    const sheet = document.getElementById('canvasWrapper');
+    const r = sheet ? sheet.getBoundingClientRect() : null;
+    if (r && r.width > 0 && r.height > 0) {
+      toastEl.style.left = `${r.left + r.width / 2}px`;
+      toastEl.style.bottom = `${Math.max(12, window.innerHeight - r.bottom + 64)}px`;
+      toastEl.style.maxWidth = `${r.width - 24}px`;
+    } else {
+      toastEl.style.left = '';
+      toastEl.style.bottom = '';
+      toastEl.style.maxWidth = '';
+    }
     toastEl.classList.add('show');
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => {
