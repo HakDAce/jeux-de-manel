@@ -18,8 +18,8 @@
     isRainbowColor: false,
     brushSize: 26,
     currentSticker: '🦖',
-    currentTemplate: 'stitch',
-    isPhotoTemplate: true,
+    pattern: 'none', // 'none' | 'dots' | 'stripes' | 'stars' | 'hearts'
+    guard: true, // le pinceau ne déborde pas de la zone
     rainbowHue: 0,
     undoStack: [],
     // Monde Magique
@@ -46,14 +46,14 @@
     { hex: '#facc15', name: 'Jaune Soleil' },
     { hex: '#84cc16', name: 'Vert Pomme' },
     { hex: '#22c55e', name: 'Vert' },
-    { hex: '#14b8a6', name: 'Turquoise Jasmine' },
-    { hex: '#38bdf8', name: 'Bleu Stitch' },
+    { hex: '#14b8a6', name: 'Turquoise' },
+    { hex: '#38bdf8', name: 'Bleu Ciel' },
     { hex: '#2563eb', name: 'Bleu Roi' },
-    { hex: '#8b5cf6', name: 'Violet Raiponce' },
+    { hex: '#8b5cf6', name: 'Violet' },
     { hex: '#d946ef', name: 'Rose Magique' },
     { hex: '#f43f5e', name: 'Rose Corail' },
-    { hex: '#fdba74', name: 'Beige Peau Douce' },
-    { hex: '#a16207', name: 'Marron Lion' },
+    { hex: '#fdba74', name: 'Beige' },
+    { hex: '#a16207', name: 'Marron' },
     { hex: '#475569', name: 'Gris / Noir' },
     { hex: '#ffffff', name: 'Blanc Nuage' }
   ];
@@ -65,28 +65,22 @@
     '🪄', '🦁', '🧞', '🌴'
   ];
 
-  // Les 14 personnages envoyés + les 5 Dinos/Magie + Toile Libre
-  const TEMPLATES = [
-    { id: 'stitch', name: 'Stitch', imgKey: 'stitch' },
-    { id: 'vaiana', name: 'Vaiana', imgKey: 'vaiana' },
-    { id: 'maui', name: 'Maui', imgKey: 'maui' },
-    { id: 'olaf', name: 'Olaf', imgKey: 'olaf' },
-    { id: 'raiponce', name: 'Raiponce', imgKey: 'raiponce' },
-    { id: 'mickey', name: 'Mickey', imgKey: 'mickey' },
-    { id: 'winnie', name: 'Winnie', imgKey: 'winnie' },
-    { id: 'bob', name: 'Bob', imgKey: 'bob' },
-    { id: 'simba_nala', name: 'Simba & Nala', imgKey: 'simba_nala' },
-    { id: 'roi_lion', name: 'Roi Lion', imgKey: 'roi_lion' },
-    { id: 'timon_pumbaa', name: 'Timon & Pumbaa', imgKey: 'timon_pumbaa' },
-    { id: 'jasmine', name: 'Jasmine', imgKey: 'jasmine' },
-    { id: 'aladdin', name: 'Aladdin', imgKey: 'aladdin' },
-    { id: 'jasmine_portrait', name: 'Princesse Jasmine', imgKey: 'jasmine_portrait' },
-    { id: 'trex', name: 'Rexy Dino', emoji: '🦖' },
-    { id: 'unicorn', name: 'Licorne', emoji: '🦄' },
-    { id: 'diplo', name: 'Grand Diplo', emoji: '🦕' },
-    { id: 'dragon', name: 'Petit Dragon', emoji: '🐉' },
-    { id: 'tricera', name: 'Tricéra Fée', emoji: '🍄' },
-    { id: 'blank', name: 'Toile Libre', emoji: '📄' }
+  // Images personnelles (photos) proposées dans « Mes images »
+  const PHOTO_TEMPLATES = [
+    { name: 'Stitch', imgKey: 'stitch' },
+    { name: 'Vaiana', imgKey: 'vaiana' },
+    { name: 'Maui', imgKey: 'maui' },
+    { name: 'Olaf', imgKey: 'olaf' },
+    { name: 'Raiponce', imgKey: 'raiponce' },
+    { name: 'Mickey', imgKey: 'mickey' },
+    { name: 'Winnie', imgKey: 'winnie' },
+    { name: 'Bob', imgKey: 'bob' },
+    { name: 'Simba & Nala', imgKey: 'simba_nala' },
+    { name: 'Roi Lion', imgKey: 'roi_lion' },
+    { name: 'Timon & Pumbaa', imgKey: 'timon_pumbaa' },
+    { name: 'Jasmine', imgKey: 'jasmine' },
+    { name: 'Aladdin', imgKey: 'aladdin' },
+    { name: 'Princesse Jasmine', imgKey: 'jasmine_portrait' }
   ];
 
   const WORLD_ITEMS = [
@@ -319,8 +313,8 @@
 
   document.getElementById('voiceHelpBtn').addEventListener('pointerdown', () => {
     if (state.mode === 'coloring') {
-      speak('Choisis ton personnage à gauche ! Utilise le pot magique pour remplir une zone, ou la baguette Vraie Couleur pour révéler les couleurs du dessin animé !');
-      showToast('🗣️ Utilise le Pot 🪣 ou la Baguette 🪄 !');
+      speak('Touche le bouton Dessins pour choisir ton coloriage. Choisis une couleur à droite, puis touche une zone avec le pot magique. Quand tout est colorié, tu gagnes des étoiles !');
+      showToast('🗣️ Choisis un dessin, une couleur, puis touche une zone !');
     } else if (state.mode === 'world') {
       speak('Touche tes héros ou les dinosaures en bas pour les ajouter dans ton monde, et fais-les danser !');
       showToast('🗣️ Touche un héros en bas pour l’ajouter !');
@@ -356,32 +350,52 @@
   });
 
   // ==========================================================================
-  // 3. MODE 1 : COLORIAGE & DESSIN MAGIQUE (Héros Photo + Dinos Vectoriels)
+  // 3. MODE 1 : COLORIAGE (dessins au trait + zones magiques)
   // ==========================================================================
+  const W = 900;
+  const H = 650;
+  const N = W * H;
+  const LINE_RGB = [30, 27, 75];
+
+  const PAGES = window.COLORING_PAGES || [];
+  const CATS = window.COLORING_CATEGORIES || [];
+  const PHOTO_PAGES = PHOTO_TEMPLATES.filter((t) => CHAR_IMGS[t.imgKey]);
+  const DONE_KEY = 'manel_coloriages_finis_v1';
+
   const paintCanvas = document.getElementById('paintCanvas');
   const ctx = paintCanvas.getContext('2d', { willReadFrequently: true });
 
-  // Calque des contours noirs du coloriage
-  const lineCanvas = document.createElement('canvas');
-  lineCanvas.width = paintCanvas.width;
-  lineCanvas.height = paintCanvas.height;
-  const lineCtx = lineCanvas.getContext('2d', { willReadFrequently: true });
+  function makeLayer() {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    return [c, c.getContext('2d', { willReadFrequently: true })];
+  }
 
-  // Calque de couleur de l'enfant (sous les traits noirs)
-  const colorCanvas = document.createElement('canvas');
-  colorCanvas.width = paintCanvas.width;
-  colorCanvas.height = paintCanvas.height;
-  const colorCtx = colorCanvas.getContext('2d', { willReadFrequently: true });
+  const [lineCanvas, lineCtx] = makeLayer();   // traits noirs (transparents ailleurs)
+  const [colorCanvas, colorCtx] = makeLayer(); // couleurs de l'enfant
+  const [refCanvas, refCtx] = makeLayer();     // modèle en couleurs (baguette)
+  const [maskCanvas, maskCtx] = makeLayer();   // zone autorisée pour le pinceau
+  const [strokeCanvas, strokeCtx] = makeLayer();
 
-  // Calque de référence contenant l'image couleur originale du personnage
-  // (utilisé pour guider intelligemment le Pot Magique et la Baguette Vraie Couleur !)
-  const refCanvas = document.createElement('canvas');
-  refCanvas.width = paintCanvas.width;
-  refCanvas.height = paintCanvas.height;
-  const refCtx = refCanvas.getContext('2d', { willReadFrequently: true });
+  // La feuille garde ses proportions (pas de dessin écrasé) quelle que soit la tablette
+  const canvasWrapper = document.getElementById('canvasWrapper');
+  function fitCanvas() {
+    const r = canvasWrapper.getBoundingClientRect();
+    const availW = r.width - 16;
+    const availH = r.height - 16;
+    if (availW <= 0 || availH <= 0) return;
+    const sc = Math.min(availW / W, availH / H);
+    paintCanvas.style.width = `${Math.floor(W * sc)}px`;
+    paintCanvas.style.height = `${Math.floor(H * sc)}px`;
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitCanvas).observe(canvasWrapper);
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
 
   const modelPreviewCard = document.getElementById('modelPreviewCard');
   const modelPreviewImg = document.getElementById('modelPreviewImg');
+  const progressPill = document.getElementById('progressPill');
 
   modelPreviewCard.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
@@ -389,19 +403,31 @@
     playSoundEffect('pop');
   });
 
+  // Zones fermées de la page : labels[p] > 0 = numéro de zone, 0 = trait
+  let zones = null;
+  let currentPage = null;
+  let celebrated = false;
+  let refData = null;
+  const pageMemory = {};
+
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
   function compositeCanvas() {
-    ctx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+    ctx.clearRect(0, 0, W, H);
     ctx.drawImage(colorCanvas, 0, 0);
-    if (state.currentTemplate !== 'blank') {
-      ctx.drawImage(lineCanvas, 0, 0);
-    }
+    if (currentPage && currentPage.kind !== 'blank') ctx.drawImage(lineCanvas, 0, 0);
   }
 
   function saveUndoState() {
-    if (state.undoStack.length >= 12) {
-      state.undoStack.shift();
-    }
-    state.undoStack.push(colorCtx.getImageData(0, 0, colorCanvas.width, colorCanvas.height));
+    if (state.undoStack.length >= 15) state.undoStack.shift();
+    state.undoStack.push(colorCtx.getImageData(0, 0, W, H));
   }
 
   function restoreUndoState() {
@@ -409,528 +435,169 @@
       showToast('Rien à annuler !');
       return;
     }
-    const prev = state.undoStack.pop();
-    colorCtx.putImageData(prev, 0, 0);
+    colorCtx.putImageData(state.undoStack.pop(), 0, 0);
     compositeCanvas();
     playSoundEffect('undo');
     showToast('↩️ Oups annulé !');
+    scheduleProgress();
   }
 
-  // --- Conversion Intelligente d'une Image de Personnage en Page de Coloriage ---
-  function convertRefCanvasToColoringLines() {
-    const w = refCanvas.width;
-    const h = refCanvas.height;
-    const src = refCtx.getImageData(0, 0, w, h).data;
-    const outImg = lineCtx.createImageData(w, h);
-    const dst = outImg.data;
+  function whitePaper() {
+    colorCtx.fillStyle = '#ffffff';
+    colorCtx.fillRect(0, 0, W, H);
+  }
 
-    // Détection de contours multi-canal (Sobel R, G, B + Luminance)
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const idx = (y * w + x) * 4;
+  // --- Dessin au trait (SVG blanc) -> calque de traits transparent ---
+  function imageToLines(img) {
+    const [t, tc] = makeLayer();
+    tc.fillStyle = '#ffffff';
+    tc.fillRect(0, 0, W, H);
+    tc.drawImage(img, 0, 0, W, H);
+    const d = tc.getImageData(0, 0, W, H).data;
+    const out = lineCtx.createImageData(W, H);
+    const o = out.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      o[i] = LINE_RGB[0];
+      o[i + 1] = LINE_RGB[1];
+      o[i + 2] = LINE_RGB[2];
+      o[i + 3] = Math.max(0, Math.min(255, (255 - lum) * 1.3));
+    }
+    lineCtx.putImageData(out, 0, 0);
+  }
 
-        const tl = ((y - 1) * w + (x - 1)) * 4;
-        const tc = ((y - 1) * w + x) * 4;
-        const tr = ((y - 1) * w + (x + 1)) * 4;
-        const ml = (y * w + (x - 1)) * 4;
-        const mr = (y * w + (x + 1)) * 4;
-        const bl = ((y + 1) * w + (x - 1)) * 4;
-        const bc = ((y + 1) * w + x) * 4;
-        const br = ((y + 1) * w + (x + 1)) * 4;
+  // --- Repérage des zones fermées (une seule fois par dessin) ---
+  function computeZones() {
+    const a = lineCtx.getImageData(0, 0, W, H).data;
+    const labels = new Int32Array(N);
+    for (let p = 0; p < N; p++) labels[p] = a[p * 4 + 3] < 110 ? -1 : 0;
 
-        let maxGrad = 0;
-        for (let c = 0; c < 3; c++) {
-          const gx =
-            -src[tl + c] + src[tr + c] -
-            2 * src[ml + c] + 2 * src[mr + c] -
-            src[bl + c] + src[br + c];
-          const gy =
-            -src[tl + c] - 2 * src[tc + c] - src[tr + c] +
-            src[bl + c] + 2 * src[bc + c] + src[br + c];
-          const g = Math.sqrt(gx * gx + gy * gy);
-          if (g > maxGrad) maxGrad = g;
-        }
+    const sizes = [0];
+    const stack = new Int32Array(N);
+    let next = 1;
+    for (let p = 0; p < N; p++) {
+      if (labels[p] !== -1) continue;
+      let sp = 0;
+      let size = 0;
+      stack[sp++] = p;
+      labels[p] = next;
+      while (sp) {
+        const q = stack[--sp];
+        size++;
+        const x = q % W;
+        if (x > 0 && labels[q - 1] === -1) { labels[q - 1] = next; stack[sp++] = q - 1; }
+        if (x < W - 1 && labels[q + 1] === -1) { labels[q + 1] = next; stack[sp++] = q + 1; }
+        if (q >= W && labels[q - W] === -1) { labels[q - W] = next; stack[sp++] = q - W; }
+        if (q < N - W && labels[q + W] === -1) { labels[q + W] = next; stack[sp++] = q + W; }
+      }
+      sizes.push(size);
+      next++;
+    }
 
-        const r = src[idx];
-        const g = src[idx + 1];
-        const b = src[idx + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Les pixels du trait sont rattachés à la zone voisine : la couleur passe
+    // sous le trait, sans liseré blanc.
+    const owner = new Int32Array(N);
+    let frontier = [];
+    for (let p = 0; p < N; p++) {
+      if (labels[p] !== 0) continue;
+      const x = p % W;
+      const n =
+        (x > 0 && labels[p - 1] > 0 && labels[p - 1]) ||
+        (x < W - 1 && labels[p + 1] > 0 && labels[p + 1]) ||
+        (p >= W && labels[p - W] > 0 && labels[p - W]) ||
+        (p < N - W && labels[p + W] > 0 && labels[p + W]) || 0;
+      if (n) { owner[p] = n; frontier.push(p); }
+    }
+    for (let step = 0; step < 6 && frontier.length; step++) {
+      const nf = [];
+      for (const p of frontier) {
+        const x = p % W;
+        const L = owner[p];
+        const tryPx = (q) => {
+          if (labels[q] === 0 && owner[q] === 0) { owner[q] = L; nf.push(q); }
+        };
+        if (x > 0) tryPx(p - 1);
+        if (x < W - 1) tryPx(p + 1);
+        if (p >= W) tryPx(p - W);
+        if (p < N - W) tryPx(p + W);
+      }
+      frontier = nf;
+    }
 
-        let lineAlpha = 0;
+    // Zones qui comptent pour la progression (on ignore les miettes et le fond)
+    const big = [];
+    let largest = 0;
+    for (let L = 1; L < sizes.length; L++) {
+      if (sizes[L] >= 350) big.push(L);
+      if (sizes[L] > sizes[largest]) largest = L;
+    }
+    zones = { labels, owner, sizes, big: big.filter((L) => L !== largest), touched: new Uint8Array(sizes.length) };
+  }
 
-        // 1. Traits noirs existants dans le dessin animé (ex: yeux, sourire, contours de Stitch/Mickey)
-        if (lum < 62) {
-          lineAlpha = Math.max(lineAlpha, Math.min(255, (68 - lum) * 4.2));
-        }
-
-        // 2. Contours entre deux zones de couleurs (ex: robe de Raiponce, chemise de Winnie, Vaiana)
-        if (maxGrad > 42) {
-          const edgeAlpha = Math.min(255, (maxGrad - 32) * 2.2);
-          if (edgeAlpha > lineAlpha) lineAlpha = edgeAlpha;
-        }
-
-        if (lineAlpha > 20) {
-          dst[idx] = 30;     // #1e1b4b
-          dst[idx + 1] = 27;
-          dst[idx + 2] = 75;
-          dst[idx + 3] = Math.round(lineAlpha);
+  function zoneAt(x, y) {
+    if (!zones) return 0;
+    x = Math.max(0, Math.min(W - 1, Math.floor(x)));
+    y = Math.max(0, Math.min(H - 1, Math.floor(y)));
+    const p = y * W + x;
+    if (zones.labels[p] > 0) return zones.labels[p];
+    // L'enfant a touché un trait : on prend la zone la plus proche
+    for (let r = 1; r <= 14; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+          const L = zones.labels[yy * W + xx];
+          if (L > 0 && zones.sizes[L] > 30) return L;
         }
       }
     }
-
-    lineCtx.putImageData(outImg, 0, 0);
-    // Cadre propre autour de la feuille
-    lineCtx.strokeStyle = '#1e1b4b';
-    lineCtx.lineWidth = 6;
-    lineCtx.strokeRect(3, 3, w - 6, h - 6);
+    return 0;
   }
 
-  function loadCharacterImageTemplate(dataUrl, label) {
-    state.isPhotoTemplate = true;
-    state.undoStack = [];
-
-    const img = new Image();
-    img.onload = () => {
-      // 1. Dessiner le personnage bien centré sur fond blanc dans refCanvas
-      refCtx.fillStyle = '#ffffff';
-      refCtx.fillRect(0, 0, refCanvas.width, refCanvas.height);
-
-      const pad = 28;
-      const availW = refCanvas.width - pad * 2;
-      const availH = refCanvas.height - pad * 2;
-      const scale = Math.min(availW / img.width, availH / img.height);
-      const drawW = img.width * scale;
-      const drawH = img.height * scale;
-      const dx = (refCanvas.width - drawW) / 2;
-      const dy = (refCanvas.height - drawH) / 2;
-
-      refCtx.drawImage(img, dx, dy, drawW, drawH);
-
-      // 2. Extraire automatiquement les contours de coloriage dans lineCanvas
-      convertRefCanvasToColoringLines();
-
-      // 3. Initialiser la feuille de coloriage en blanc
-      colorCtx.fillStyle = '#ffffff';
-      colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
-
-      // 4. Afficher la miniature du Modèle Couleur en haut à gauche
-      modelPreviewImg.src = dataUrl;
-      modelPreviewCard.classList.add('visible');
-      modelPreviewCard.classList.remove('zoomed');
-
-      compositeCanvas();
-    };
-    img.src = dataUrl;
-    if (label) {
-      showToast(`🎨 Coloriage : ${label} !`);
+  // --- Motifs (pois, rayures, étoiles, cœurs) ---
+  const TILE = 44;
+  function makePatternTile(rgb, pattern) {
+    const t = document.createElement('canvas');
+    t.width = TILE;
+    t.height = TILE;
+    const c = t.getContext('2d', { willReadFrequently: true });
+    c.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    c.fillRect(0, 0, TILE, TILE);
+    c.fillStyle = 'rgba(255,255,255,0.85)';
+    c.strokeStyle = 'rgba(255,255,255,0.85)';
+    if (pattern === 'dots') {
+      [[11, 11], [33, 33]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 6, 0, Math.PI * 2); c.fill(); });
+    } else if (pattern === 'stripes') {
+      c.lineWidth = 8;
+      for (let k = -TILE; k <= TILE * 2; k += 22) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k - TILE, TILE); c.stroke(); }
+    } else if (pattern === 'stars') {
+      c.font = '18px sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('★', 11, 12);
+      c.fillText('★', 33, 34);
+    } else if (pattern === 'hearts') {
+      c.font = '17px sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('♥', 11, 12);
+      c.fillText('♥', 33, 34);
     }
+    return c.getImageData(0, 0, TILE, TILE).data;
   }
 
-  // --- Dessin des 5 Modèles Vectoriels Dinos & Magie ---
-  function drawTemplateLines(templateId) {
-    lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-    if (templateId === 'blank') return;
-
-    lineCtx.strokeStyle = '#1e1b4b';
-    lineCtx.fillStyle = '#1e1b4b';
-    lineCtx.lineWidth = 7;
-    lineCtx.lineCap = 'round';
-    lineCtx.lineJoin = 'round';
-
-    lineCtx.strokeRect(3, 3, lineCanvas.width - 6, lineCanvas.height - 6);
-
-    if (templateId === 'trex') {
-      drawTrexTemplate(lineCtx);
-    } else if (templateId === 'unicorn') {
-      drawUnicornTemplate(lineCtx);
-    } else if (templateId === 'diplo') {
-      drawDiploTemplate(lineCtx);
-    } else if (templateId === 'dragon') {
-      drawDragonTemplate(lineCtx);
-    } else if (templateId === 'tricera') {
-      drawTriceraTemplate(lineCtx);
+  function currentRgb() {
+    if (state.isRainbowColor) {
+      state.rainbowHue = (state.rainbowHue + 47) % 360;
+      return hslToRgb(state.rainbowHue, 90, 60);
     }
+    return hexToRgba(state.currentColor);
   }
 
-  function drawCloud(c, x, y, scale = 1) {
-    c.save();
-    c.translate(x, y);
-    c.scale(scale, scale);
-    c.beginPath();
-    c.moveTo(-60, 20);
-    c.quadraticCurveTo(-75, -10, -40, -15);
-    c.quadraticCurveTo(-25, -45, 10, -30);
-    c.quadraticCurveTo(45, -45, 60, -10);
-    c.quadraticCurveTo(85, -5, 70, 20);
-    c.closePath();
-    c.stroke();
-    c.restore();
-  }
-
-  function drawStarShape(c, cx, cy, spikes, outerR, innerR) {
-    let rot = (Math.PI / 2) * 3;
-    let x = cx;
-    let y = cy;
-    const step = Math.PI / spikes;
-    c.beginPath();
-    c.moveTo(cx, cy - outerR);
-    for (let i = 0; i < spikes; i++) {
-      x = cx + Math.cos(rot) * outerR;
-      y = cy + Math.sin(rot) * outerR;
-      c.lineTo(x, y);
-      rot += step;
-      x = cx + Math.cos(rot) * innerR;
-      y = cy + Math.sin(rot) * innerR;
-      c.lineTo(x, y);
-      rot += step;
-    }
-    c.lineTo(cx, cy - outerR);
-    c.closePath();
-    c.stroke();
-  }
-
-  function drawTrexTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 520);
-    c.quadraticCurveTo(450, 480, 897, 530);
-    c.stroke();
-
-    c.beginPath();
-    c.arc(110, 105, 55, 0, Math.PI * 2);
-    c.stroke();
-
-    drawCloud(c, 420, 95, 1.0);
-
-    c.beginPath();
-    c.moveTo(590, 512);
-    c.lineTo(665, 290);
-    c.lineTo(795, 290);
-    c.lineTo(870, 528);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(665, 290);
-    c.quadraticCurveTo(680, 360, 700, 355);
-    c.quadraticCurveTo(730, 315, 745, 370);
-    c.quadraticCurveTo(775, 370, 795, 290);
-    c.closePath();
-    c.stroke();
-
-    drawCloud(c, 730, 210, 0.95);
-
-    c.beginPath();
-    c.moveTo(190, 440);
-    c.quadraticCurveTo(70, 410, 65, 340);
-    c.quadraticCurveTo(100, 350, 200, 370);
-    c.quadraticCurveTo(210, 250, 260, 210);
-    c.quadraticCurveTo(240, 120, 330, 115);
-    c.lineTo(465, 125);
-    c.quadraticCurveTo(510, 135, 500, 195);
-    c.quadraticCurveTo(495, 240, 400, 245);
-    c.quadraticCurveTo(455, 310, 435, 425);
-    c.lineTo(445, 505);
-    c.lineTo(375, 505);
-    c.lineTo(370, 445);
-    c.lineTo(310, 445);
-    c.lineTo(305, 505);
-    c.lineTo(235, 505);
-    c.lineTo(235, 440);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(395, 250);
-    c.quadraticCurveTo(335, 310, 350, 425);
-    c.quadraticCurveTo(435, 420, 435, 340);
-    c.closePath();
-    c.stroke();
-    c.beginPath();
-    c.moveTo(352, 310); c.lineTo(432, 310);
-    c.moveTo(348, 365); c.lineTo(436, 365);
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(385, 285);
-    c.quadraticCurveTo(445, 285, 440, 315);
-    c.quadraticCurveTo(400, 325, 375, 310);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(295, 118);
-    c.lineTo(285, 55);
-    c.lineTo(330, 88);
-    c.lineTo(360, 45);
-    c.lineTo(390, 88);
-    c.lineTo(430, 55);
-    c.lineTo(415, 120);
-    c.closePath();
-    c.stroke();
-
-    const spikes = [
-      [[248, 220], [205, 195], [228, 260]],
-      [[225, 270], [175, 255], [208, 320]],
-      [[205, 330], [155, 320], [195, 370]]
-    ];
-    spikes.forEach((pts) => {
-      c.beginPath();
-      c.moveTo(pts[0][0], pts[0][1]);
-      c.lineTo(pts[1][0], pts[1][1]);
-      c.lineTo(pts[2][0], pts[2][1]);
-      c.closePath();
-      c.stroke();
-    });
-
-    c.beginPath();
-    c.arc(365, 160, 22, 0, Math.PI * 2);
-    c.stroke();
-    c.beginPath();
-    c.arc(372, 160, 9, 0, Math.PI * 2);
-    c.fill();
-
-    c.beginPath();
-    c.moveTo(390, 205);
-    c.quadraticCurveTo(445, 220, 485, 195);
-    c.stroke();
-  }
-
-  function drawUnicornTemplate(c) {
-    const radii = [380, 340, 300, 260];
-    radii.forEach((r) => {
-      c.beginPath();
-      c.arc(450, 560, r, Math.PI, 0, false);
-      c.stroke();
-    });
-
-    drawCloud(c, 140, 535, 1.35);
-    drawCloud(c, 760, 535, 1.35);
-
-    c.beginPath();
-    c.moveTo(3, 560);
-    c.lineTo(897, 560);
-    c.stroke();
-
-    drawStarShape(c, 150, 120, 5, 42, 20);
-    drawStarShape(c, 760, 120, 5, 42, 20);
-    drawStarShape(c, 450, 85, 5, 34, 16);
-
-    c.beginPath();
-    c.moveTo(350, 330);
-    c.quadraticCurveTo(310, 390, 330, 450);
-    c.lineTo(320, 545);
-    c.lineTo(365, 545);
-    c.lineTo(375, 460);
-    c.lineTo(505, 460);
-    c.lineTo(515, 545);
-    c.lineTo(565, 545);
-    c.lineTo(565, 430);
-    c.quadraticCurveTo(590, 355, 525, 335);
-    c.lineTo(410, 335);
-    c.lineTo(385, 225);
-    c.quadraticCurveTo(375, 175, 325, 185);
-    c.quadraticCurveTo(255, 200, 255, 245);
-    c.quadraticCurveTo(260, 285, 320, 280);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(295, 195);
-    c.lineTo(220, 95);
-    c.lineTo(335, 182);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(430, 355);
-    c.quadraticCurveTo(450, 230, 565, 235);
-    c.quadraticCurveTo(555, 290, 520, 300);
-    c.quadraticCurveTo(560, 320, 510, 355);
-    c.quadraticCurveTo(475, 380, 430, 355);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.arc(315, 230, 14, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function drawDiploTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 520);
-    c.quadraticCurveTo(300, 460, 600, 510);
-    c.quadraticCurveTo(760, 535, 897, 495);
-    c.stroke();
-
-    c.beginPath();
-    c.arc(780, 110, 58, 0, Math.PI * 2);
-    c.stroke();
-
-    drawCloud(c, 520, 100, 1.05);
-
-    c.beginPath();
-    c.moveTo(335, 130);
-    c.quadraticCurveTo(420, 120, 425, 175);
-    c.quadraticCurveTo(425, 215, 355, 205);
-    c.quadraticCurveTo(340, 320, 385, 375);
-    c.lineTo(385, 515);
-    c.lineTo(320, 515);
-    c.lineTo(315, 435);
-    c.lineTo(215, 435);
-    c.lineTo(210, 515);
-    c.lineTo(145, 515);
-    c.lineTo(145, 415);
-    c.quadraticCurveTo(60, 415, 45, 335);
-    c.quadraticCurveTo(95, 355, 155, 345);
-    c.quadraticCurveTo(215, 265, 285, 330);
-    c.quadraticCurveTo(280, 200, 295, 145);
-    c.quadraticCurveTo(305, 130, 335, 130);
-    c.closePath();
-    c.stroke();
-
-    [[215, 345, 28], [265, 375, 22], [175, 380, 18]].forEach(([x, y, r]) => {
-      c.beginPath();
-      c.arc(x, y, r, 0, Math.PI * 2);
-      c.stroke();
-    });
-
-    c.beginPath();
-    c.arc(360, 160, 12, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function drawDragonTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 525);
-    c.lineTo(897, 525);
-    c.stroke();
-
-    c.beginPath();
-    c.rect(75, 260, 130, 265);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(60, 260);
-    c.lineTo(140, 130);
-    c.lineTo(220, 260);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(410, 300);
-    c.lineTo(275, 195);
-    c.lineTo(255, 315);
-    c.quadraticCurveTo(315, 295, 340, 345);
-    c.quadraticCurveTo(375, 320, 410, 350);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(525, 300);
-    c.lineTo(665, 195);
-    c.lineTo(685, 315);
-    c.quadraticCurveTo(625, 295, 595, 345);
-    c.quadraticCurveTo(560, 320, 525, 350);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.ellipse(470, 395, 85, 120, 0, 0, Math.PI * 2);
-    c.stroke();
-
-    c.beginPath();
-    c.ellipse(470, 410, 52, 90, 0, 0, Math.PI * 2);
-    c.stroke();
-
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.arc(470, 225, 72, 0, Math.PI * 2);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#1e1b4b';
-
-    c.beginPath();
-    c.arc(442, 215, 11, 0, Math.PI * 2);
-    c.arc(498, 215, 11, 0, Math.PI * 2);
-    c.fill();
-
-    drawStarShape(c, 640, 105, 5, 38, 18);
-  }
-
-  function drawTriceraTemplate(c) {
-    c.beginPath();
-    c.moveTo(3, 525);
-    c.quadraticCurveTo(450, 495, 897, 525);
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(115, 520);
-    c.lineTo(130, 350);
-    c.lineTo(190, 350);
-    c.lineTo(205, 520);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(55, 355);
-    c.quadraticCurveTo(160, 195, 265, 355);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.arc(465, 275, 115, Math.PI * 0.75, Math.PI * 2.15, false);
-    c.closePath();
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(530, 330);
-    c.quadraticCurveTo(720, 310, 745, 420);
-    c.lineTo(795, 445);
-    c.lineTo(735, 465);
-    c.lineTo(730, 515);
-    c.lineTo(670, 515);
-    c.lineTo(665, 465);
-    c.lineTo(555, 465);
-    c.lineTo(550, 515);
-    c.lineTo(490, 515);
-    c.lineTo(485, 420);
-    c.closePath();
-    c.stroke();
-
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.ellipse(435, 315, 85, 65, 0, 0, Math.PI * 2);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#1e1b4b';
-
-    c.beginPath();
-    c.arc(415, 305, 12, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function loadTemplate(tpl) {
-    state.currentTemplate = tpl.id;
-    state.undoStack = [];
-
-    if (tpl.imgKey && CHAR_IMGS[tpl.imgKey]) {
-      loadCharacterImageTemplate(CHAR_IMGS[tpl.imgKey], tpl.name);
-      return;
-    }
-
-    state.isPhotoTemplate = false;
-    modelPreviewCard.classList.remove('visible');
-
-    colorCtx.fillStyle = '#ffffff';
-    colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
-
-    drawTemplateLines(tpl.id);
-    compositeCanvas();
-  }
-
-  // --- Algorithme Pot Magique Guidé (Fonctionne sur les 14 Héros Photo ET les Dinos !) ---
   function hexToRgba(hex) {
-    const clean = hex.replace('#', '');
-    const num = parseInt(clean, 16);
+    const num = parseInt(hex.replace('#', ''), 16);
     return [(num >> 16) & 255, (num >> 8) & 255, num & 255, 255];
   }
 
@@ -943,167 +610,342 @@
     return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4)), 255];
   }
 
-  function floodFillAt(startX, startY) {
-    const w = colorCanvas.width;
-    const h = colorCanvas.height;
-    startX = Math.max(0, Math.min(w - 1, Math.floor(startX)));
-    startY = Math.max(0, Math.min(h - 1, Math.floor(startY)));
-
-    const lineData = lineCtx.getImageData(0, 0, w, h).data;
-    const colorImg = colorCtx.getImageData(0, 0, w, h);
-    const data = colorImg.data;
-    const refData = state.isPhotoTemplate ? refCtx.getImageData(0, 0, w, h).data : null;
-
-    const startIdx = (startY * w + startX) * 4;
-    if (state.currentTemplate !== 'blank' && lineData[startIdx + 3] > 210) {
-      return false;
-    }
-
-    let fillRgba;
-    if (state.isRainbowColor) {
-      state.rainbowHue = (state.rainbowHue + 45) % 360;
-      fillRgba = hslToRgb(state.rainbowHue, 90, 60);
-    } else {
-      fillRgba = hexToRgba(state.currentColor);
-    }
-
-    const targetR = data[startIdx];
-    const targetG = data[startIdx + 1];
-    const targetB = data[startIdx + 2];
-
-    const refR0 = refData ? refData[startIdx] : 0;
-    const refG0 = refData ? refData[startIdx + 1] : 0;
-    const refB0 = refData ? refData[startIdx + 2] : 0;
-
-    if (
-      Math.abs(targetR - fillRgba[0]) < 8 &&
-      Math.abs(targetG - fillRgba[1]) < 8 &&
-      Math.abs(targetB - fillRgba[2]) < 8
-    ) {
-      return false;
-    }
-
+  // --- Pot magique : remplit toute la zone touchée ---
+  function fillZone(L, mode) {
+    if (!L) return false;
     saveUndoState();
+    const img = colorCtx.getImageData(0, 0, W, H);
+    const d = img.data;
+    const { labels, owner } = zones;
+    const rgb = mode === 'model' ? null : currentRgb();
+    const tile = mode === 'model' || state.pattern === 'none' ? null : makePatternTile(rgb, state.pattern);
 
-    const visited = new Uint8Array(w * h);
-    const stack = [startX, startY];
-    const hasLines = state.currentTemplate !== 'blank';
-
-    function canFill(px, py) {
-      if (px < 0 || px >= w || py < 0 || py >= h) return false;
-      const pIdx = py * w + px;
-      if (visited[pIdx]) return false;
-      const idx4 = pIdx * 4;
-      if (hasLines && lineData[idx4 + 3] > 185) return false;
-
-      // Vérifier la cohérence sur colorCanvas
-      const dr = Math.abs(data[idx4] - targetR);
-      const dg = Math.abs(data[idx4 + 1] - targetG);
-      const db = Math.abs(data[idx4 + 2] - targetB);
-      if (dr + dg + db > 75) return false;
-
-      // Si c'est une image de personnage, guider le remplissage grâce aux zones de couleur de l'image originale !
-      if (refData) {
-        const rdr = Math.abs(refData[idx4] - refR0);
-        const rdg = Math.abs(refData[idx4 + 1] - refG0);
-        const rdb = Math.abs(refData[idx4 + 2] - refB0);
-        if (rdr + rdg + rdb > 120) return false;
+    for (let p = 0; p < N; p++) {
+      if (labels[p] !== L && !(labels[p] === 0 && owner[p] === L)) continue;
+      const i = p * 4;
+      if (mode === 'model') {
+        d[i] = refData[i]; d[i + 1] = refData[i + 1]; d[i + 2] = refData[i + 2];
+      } else if (tile) {
+        const t = (((p / W) | 0) % TILE * TILE + (p % W) % TILE) * 4;
+        d[i] = tile[t]; d[i + 1] = tile[t + 1]; d[i + 2] = tile[t + 2];
+      } else {
+        d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2];
       }
-
-      return true;
+      d[i + 3] = 255;
     }
+    colorCtx.putImageData(img, 0, 0);
+    zones.touched[L] = 1;
+    compositeCanvas();
+    scheduleProgress();
+    return true;
+  }
 
-    while (stack.length > 0) {
-      const y = stack.pop();
-      const x = stack.pop();
-      let lx = x;
-
-      while (lx >= 0 && canFill(lx, y)) lx--;
-      lx++;
-
-      let rx = x;
-      while (rx < w && canFill(rx, y)) rx++;
-      rx--;
-
-      let spanAbove = false;
-      let spanBelow = false;
-
-      for (let ix = lx; ix <= rx; ix++) {
-        const pIdx = y * w + ix;
-        visited[pIdx] = 1;
-        const idx4 = pIdx * 4;
-        data[idx4] = fillRgba[0];
-        data[idx4 + 1] = fillRgba[1];
-        data[idx4 + 2] = fillRgba[2];
-        data[idx4 + 3] = 255;
-
-        if (y > 0) {
-          if (!spanAbove && canFill(ix, y - 1)) {
-            stack.push(ix, y - 1);
-            spanAbove = true;
-          } else if (spanAbove && !canFill(ix, y - 1)) {
-            spanAbove = false;
-          }
-        }
-        if (y < h - 1) {
-          if (!spanBelow && canFill(ix, y + 1)) {
-            stack.push(ix, y + 1);
-            spanBelow = true;
-          } else if (spanBelow && !canFill(ix, y + 1)) {
-            spanBelow = false;
-          }
-        }
-      }
+  // Page blanche : remplissage simple de la tache de couleur touchée
+  function floodFillBlank(sx, sy) {
+    sx = Math.floor(sx);
+    sy = Math.floor(sy);
+    const img = colorCtx.getImageData(0, 0, W, H);
+    const d = img.data;
+    const s = (sy * W + sx) * 4;
+    const tr = d[s], tg = d[s + 1], tb = d[s + 2];
+    const rgb = currentRgb();
+    if (Math.abs(tr - rgb[0]) + Math.abs(tg - rgb[1]) + Math.abs(tb - rgb[2]) < 12) return false;
+    saveUndoState();
+    const seen = new Uint8Array(N);
+    const stack = [sy * W + sx];
+    while (stack.length) {
+      const p = stack.pop();
+      if (seen[p]) continue;
+      seen[p] = 1;
+      const i = p * 4;
+      if (Math.abs(d[i] - tr) + Math.abs(d[i + 1] - tg) + Math.abs(d[i + 2] - tb) > 90) continue;
+      d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = 255;
+      const x = p % W;
+      if (x > 0) stack.push(p - 1);
+      if (x < W - 1) stack.push(p + 1);
+      if (p >= W) stack.push(p - W);
+      if (p < N - W) stack.push(p + W);
     }
-
-    // Dilatation de 1 pixel sous les contours pour un rendu net sans bord blanc
-    if (hasLines) {
-      for (let y = 1; y < h - 1; y++) {
-        for (let x = 1; x < w - 1; x++) {
-          const pIdx = y * w + x;
-          if (!visited[pIdx]) {
-            if (visited[pIdx - 1] || visited[pIdx + 1] || visited[pIdx - w] || visited[pIdx + w]) {
-              const idx4 = pIdx * 4;
-              data[idx4] = fillRgba[0];
-              data[idx4 + 1] = fillRgba[1];
-              data[idx4 + 2] = fillRgba[2];
-              data[idx4 + 3] = 255;
-            }
-          }
-        }
-      }
-    }
-
-    colorCtx.putImageData(colorImg, 0, 0);
+    colorCtx.putImageData(img, 0, 0);
     compositeCanvas();
     return true;
   }
 
-  // --- Interactions Tactiles sur la Toile ---
+  // --- Progression et fête quand le dessin est fini ---
+  let progressTimer = null;
+  function scheduleProgress() {
+    clearTimeout(progressTimer);
+    progressTimer = setTimeout(updateProgress, 250);
+  }
+
+  function updateProgress() {
+    if (!zones || !zones.big.length) {
+      progressPill.classList.remove('visible');
+      return;
+    }
+    const d = colorCtx.getImageData(0, 0, W, H).data;
+    const counts = new Int32Array(zones.sizes.length);
+    const { labels } = zones;
+    for (let p = 0; p < N; p++) {
+      const L = labels[p];
+      if (L > 0) {
+        const i = p * 4;
+        if (d[i] < 240 || d[i + 1] < 240 || d[i + 2] < 240) counts[L]++;
+      }
+    }
+    const total = zones.big.length;
+    const done = zones.big.filter((L) => zones.touched[L] || counts[L] > zones.sizes[L] * 0.5).length;
+    const pct = done / total;
+    const stars = Math.round(pct * 5);
+    progressPill.innerHTML = `<span class="pp-stars">${'★'.repeat(stars)}<span class="pp-off">${'★'.repeat(5 - stars)}</span></span><span class="pp-num">${Math.round(pct * 100)} %</span>`;
+    progressPill.classList.add('visible');
+    if (pct >= 0.85 && !celebrated) {
+      celebrated = true;
+      setTimeout(celebrate, 400);
+    }
+  }
+
+  function getDoneSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(DONE_KEY) || '[]')); } catch (_) { return new Set(); }
+  }
+
+  function markDone(id) {
+    const s = getDoneSet();
+    s.add(id);
+    try { localStorage.setItem(DONE_KEY, JSON.stringify([...s])); } catch (_) {}
+  }
+
+  const celebrateOverlay = document.getElementById('celebrateOverlay');
+  function celebrate() {
+    if (currentPage) markDone(currentPage.key);
+    playSoundEffect('magic');
+    setTimeout(() => playSoundEffect('fill'), 350);
+    speak('Bravo Manel ! Ton coloriage est magnifique !');
+    celebrateOverlay.classList.add('visible');
+    const rain = celebrateOverlay.querySelector('.confetti-rain');
+    rain.innerHTML = '';
+    const emojis = ['⭐', '🌟', '✨', '💖', '🎉', '🌈', '🦄', '🦖'];
+    for (let i = 0; i < 36; i++) {
+      const e = document.createElement('span');
+      e.textContent = emojis[i % emojis.length];
+      e.style.left = `${Math.random() * 100}%`;
+      e.style.animationDelay = `${Math.random() * 1.2}s`;
+      e.style.fontSize = `${1.4 + Math.random() * 1.6}rem`;
+      rain.appendChild(e);
+    }
+  }
+
+  document.getElementById('celebrateSave').addEventListener('pointerdown', () => {
+    saveCanvasToGallery(paintCanvas.toDataURL('image/jpeg', 0.88), currentPage ? currentPage.name : 'Coloriage');
+    celebrateOverlay.classList.remove('visible');
+  });
+  document.getElementById('celebrateClose').addEventListener('pointerdown', () => {
+    celebrateOverlay.classList.remove('visible');
+    playSoundEffect('pop');
+  });
+
+  // --- Photo -> coloriage par zones (posterisation) ---
+  function photoToColoring(img) {
+    refCtx.fillStyle = '#ffffff';
+    refCtx.fillRect(0, 0, W, H);
+    const pad = 20;
+    const sc = Math.min((W - pad * 2) / img.width, (H - pad * 2) / img.height);
+    const dw = img.width * sc;
+    const dh = img.height * sc;
+    refCtx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    const src = refCtx.getImageData(0, 0, W, H);
+    const d = src.data;
+
+    // 1. Réduire l'image à 8 couleurs (k-moyennes sur un échantillon)
+    const K = 8;
+    const sample = [];
+    for (let s = 0; s < 5000; s++) {
+      const p = ((Math.random() * N) | 0) * 4;
+      sample.push([d[p], d[p + 1], d[p + 2]]);
+    }
+    const centers = [sample[0]];
+    while (centers.length < K) {
+      let best = sample[0];
+      let bestD = -1;
+      for (const px of sample) {
+        let m = Infinity;
+        for (const c of centers) m = Math.min(m, (px[0] - c[0]) ** 2 + (px[1] - c[1]) ** 2 + (px[2] - c[2]) ** 2);
+        if (m > bestD) { bestD = m; best = px; }
+      }
+      centers.push(best.slice());
+    }
+    const nearest = (r, g, b) => {
+      let bi = 0;
+      let bd = Infinity;
+      for (let k = 0; k < K; k++) {
+        const c = centers[k];
+        const dd = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
+        if (dd < bd) { bd = dd; bi = k; }
+      }
+      return bi;
+    };
+    for (let it = 0; it < 8; it++) {
+      const acc = centers.map(() => [0, 0, 0, 0]);
+      for (const px of sample) {
+        const k = nearest(px[0], px[1], px[2]);
+        acc[k][0] += px[0]; acc[k][1] += px[1]; acc[k][2] += px[2]; acc[k][3]++;
+      }
+      acc.forEach((a, k) => { if (a[3]) centers[k] = [a[0] / a[3], a[1] / a[3], a[2] / a[3]]; });
+    }
+    let idx = new Uint8Array(N);
+    for (let p = 0; p < N; p++) idx[p] = nearest(d[p * 4], d[p * 4 + 1], d[p * 4 + 2]);
+
+    // 2. Lisser (filtre majoritaire) pour supprimer les petits détails
+    const cnt = new Int32Array(K);
+    for (let pass = 0; pass < 3; pass++) {
+      const out = new Uint8Array(N);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          cnt.fill(0);
+          for (let dy = -2; dy <= 2; dy++) {
+            const yy = Math.min(H - 1, Math.max(0, y + dy));
+            for (let dx = -2; dx <= 2; dx++) {
+              const xx = Math.min(W - 1, Math.max(0, x + dx));
+              cnt[idx[yy * W + xx]]++;
+            }
+          }
+          let bk = 0;
+          for (let k = 1; k < K; k++) if (cnt[k] > cnt[bk]) bk = k;
+          out[y * W + x] = bk;
+        }
+      }
+      idx = out;
+    }
+
+    // 3. Modèle aux couleurs à plat + traits entre les zones
+    const lineImg = lineCtx.createImageData(W, H);
+    const l = lineImg.data;
+    for (let p = 0; p < N; p++) {
+      const c = centers[idx[p]];
+      d[p * 4] = c[0]; d[p * 4 + 1] = c[1]; d[p * 4 + 2] = c[2];
+      const x = p % W;
+      const edge = (x < W - 1 && idx[p] !== idx[p + 1]) || (p < N - W && idx[p] !== idx[p + W]);
+      if (edge) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const q = p + dy * W + dx;
+            if (q < 0 || q >= N) continue;
+            l[q * 4] = LINE_RGB[0]; l[q * 4 + 1] = LINE_RGB[1]; l[q * 4 + 2] = LINE_RGB[2]; l[q * 4 + 3] = 255;
+          }
+        }
+      }
+    }
+    refCtx.putImageData(src, 0, 0);
+    lineCtx.putImageData(lineImg, 0, 0);
+  }
+
+  // --- Chargement d'un dessin ---
+  function rememberCurrentPage() {
+    if (currentPage) {
+      pageMemory[currentPage.key] = {
+        img: colorCtx.getImageData(0, 0, W, H),
+        touched: zones ? zones.touched : null,
+        celebrated
+      };
+    }
+  }
+
+  async function openPage(page) {
+    rememberCurrentPage();
+    currentPage = page;
+    state.undoStack = [];
+    zones = null;
+    refData = null;
+    lineCtx.clearRect(0, 0, W, H);
+    progressPill.classList.remove('visible');
+    modelPreviewCard.classList.remove('visible', 'zoomed');
+    document.getElementById('currentPageName').textContent = page.name;
+
+    try {
+      if (page.kind === 'line') {
+        const [lineImg, modelImg] = await Promise.all([loadImage(page.lineUrl), loadImage(page.modelUrl)]);
+        if (currentPage !== page) return;
+        imageToLines(lineImg);
+        refCtx.drawImage(modelImg, 0, 0, W, H);
+        modelPreviewImg.src = page.modelUrl;
+        modelPreviewCard.classList.add('visible');
+      } else if (page.kind === 'photo') {
+        showToast('⏳ Je prépare ton coloriage...');
+        const img = await loadImage(page.src);
+        if (currentPage !== page) return;
+        await new Promise((r) => setTimeout(r, 30));
+        photoToColoring(img);
+        modelPreviewImg.src = page.src;
+        modelPreviewCard.classList.add('visible');
+      }
+    } catch (_) {
+      showToast('Oups, ce dessin ne veut pas s’ouvrir !');
+    }
+
+    if (page.kind !== 'blank') {
+      computeZones();
+      refData = refCtx.getImageData(0, 0, W, H).data;
+    }
+
+    const mem = pageMemory[page.key];
+    if (mem) {
+      colorCtx.putImageData(mem.img, 0, 0);
+      if (zones && mem.touched) zones.touched = mem.touched;
+      celebrated = mem.celebrated;
+    } else {
+      whitePaper();
+      celebrated = false;
+    }
+    compositeCanvas();
+    updateProgress();
+    if (page.speak) speak(page.speak);
+  }
+
+  // --- Interactions tactiles sur la toile ---
   let isDrawing = false;
   let lastPt = null;
+  let clipActive = false;
 
   function getCanvasCoords(e) {
     const rect = paintCanvas.getBoundingClientRect();
-    const scaleX = paintCanvas.width / rect.width;
-    const scaleY = paintCanvas.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: ((e.clientX - rect.left) * W) / rect.width,
+      y: ((e.clientY - rect.top) * H) / rect.height,
       screenX: e.clientX,
       screenY: e.clientY
     };
+  }
+
+  function prepareClip(pt) {
+    clipActive = false;
+    if (!zones || !state.guard) return;
+    const L = zoneAt(pt.x, pt.y);
+    if (!L) return;
+    const m = maskCtx.createImageData(W, H);
+    const md = m.data;
+    const { labels, owner } = zones;
+    for (let p = 0; p < N; p++) {
+      if (labels[p] === L || (labels[p] === 0 && owner[p] === L)) md[p * 4 + 3] = 255;
+    }
+    maskCtx.putImageData(m, 0, 0);
+    clipActive = true;
   }
 
   paintCanvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     paintCanvas.setPointerCapture(e.pointerId);
     const pt = getCanvasCoords(e);
+    const tool = state.currentTool;
 
-    if (state.currentTool === 'fill') {
-      const filled = floodFillAt(pt.x, pt.y);
-      if (filled) {
-        playSoundEffect('fill');
+    if (tool === 'fill' || (tool === 'magicreveal' && zones)) {
+      let ok;
+      if (zones) {
+        ok = fillZone(zoneAt(pt.x, pt.y), tool === 'magicreveal' ? 'model' : 'color');
+      } else {
+        ok = floodFillBlank(pt.x, pt.y);
+      }
+      if (ok) {
+        playSoundEffect(tool === 'magicreveal' ? 'magic' : 'fill');
         spawnFloatingBurst(pt.screenX, pt.screenY, ['✨', '🌟', '🎨']);
       } else {
         playSoundEffect('pop');
@@ -1111,7 +953,7 @@
       return;
     }
 
-    if (state.currentTool === 'stamp') {
+    if (tool === 'stamp') {
       saveUndoState();
       colorCtx.save();
       colorCtx.font = `${state.brushSize * 2.2 + 28}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
@@ -1126,6 +968,7 @@
     }
 
     saveUndoState();
+    prepareClip(pt);
     isDrawing = true;
     lastPt = pt;
     drawStrokeStep(pt, pt);
@@ -1134,58 +977,150 @@
   paintCanvas.addEventListener('pointermove', (e) => {
     if (!isDrawing) return;
     e.preventDefault();
-    const pt = getCanvasCoords(e);
-    drawStrokeStep(lastPt, pt);
-    lastPt = pt;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of evs.length ? evs : [e]) {
+      const pt = getCanvasCoords(ev);
+      drawStrokeStep(lastPt, pt);
+      lastPt = pt;
+    }
   });
 
   function stopDrawing() {
+    if (isDrawing) scheduleProgress();
     isDrawing = false;
     lastPt = null;
+    clipActive = false;
   }
 
   paintCanvas.addEventListener('pointerup', stopDrawing);
   paintCanvas.addEventListener('pointercancel', stopDrawing);
 
   function drawStrokeStep(from, to) {
-    colorCtx.save();
-    colorCtx.lineCap = 'round';
-    colorCtx.lineJoin = 'round';
-    colorCtx.lineWidth = state.brushSize;
-
+    let style;
     if (state.currentTool === 'eraser') {
-      colorCtx.strokeStyle = '#ffffff';
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
-    } else if (state.currentTool === 'magicreveal' && state.isPhotoTemplate) {
-      // Baguette Magique : révèle les vraies couleurs originales du personnage sous le doigt !
-      const pattern = colorCtx.createPattern(refCanvas, 'no-repeat');
-      colorCtx.strokeStyle = pattern;
-      colorCtx.lineWidth = state.brushSize * 1.45;
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
+      style = '#ffffff';
     } else if (state.currentTool === 'rainbow' || state.isRainbowColor || state.currentTool === 'magicreveal') {
       state.rainbowHue = (state.rainbowHue + 7) % 360;
-      colorCtx.strokeStyle = `hsl(${state.rainbowHue}, 92%, 56%)`;
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
+      style = `hsl(${state.rainbowHue}, 92%, 56%)`;
     } else {
-      colorCtx.strokeStyle = state.currentColor;
-      colorCtx.beginPath();
-      colorCtx.moveTo(from.x, from.y);
-      colorCtx.lineTo(to.x, to.y);
-      colorCtx.stroke();
+      style = state.currentColor;
     }
 
-    colorCtx.restore();
+    const lw = state.brushSize;
+    const target = clipActive ? strokeCtx : colorCtx;
+    const bx = Math.max(0, Math.floor(Math.min(from.x, to.x) - lw));
+    const by = Math.max(0, Math.floor(Math.min(from.y, to.y) - lw));
+    const bw = Math.min(W - bx, Math.ceil(Math.abs(to.x - from.x) + lw * 2 + 2));
+    const bh = Math.min(H - by, Math.ceil(Math.abs(to.y - from.y) + lw * 2 + 2));
+    if (bw <= 0 || bh <= 0) return;
+    if (clipActive) strokeCtx.clearRect(bx, by, bw, bh);
+
+    target.save();
+    target.lineCap = 'round';
+    target.lineJoin = 'round';
+    target.lineWidth = lw;
+    target.strokeStyle = style;
+    target.beginPath();
+    target.moveTo(from.x, from.y);
+    target.lineTo(to.x + 0.01, to.y);
+    target.stroke();
+    target.restore();
+
+    if (clipActive) {
+      strokeCtx.globalCompositeOperation = 'destination-in';
+      strokeCtx.drawImage(maskCanvas, bx, by, bw, bh, bx, by, bw, bh);
+      strokeCtx.globalCompositeOperation = 'source-over';
+      colorCtx.drawImage(strokeCanvas, bx, by, bw, bh, bx, by, bw, bh);
+    }
     compositeCanvas();
   }
+
+  // --- Choix du dessin (grand écran avec miniatures) ---
+  const pickerOverlay = document.getElementById('pickerOverlay');
+  const pickerGrid = document.getElementById('pickerGrid');
+  const pickerCats = document.getElementById('pickerCats');
+  const customInput = document.getElementById('customImageInput');
+  let pickerCat = 'all';
+
+  const ALL_PAGES = [
+    ...PAGES.map((p) => ({ ...p, key: p.id, kind: 'line', thumb: p.lineUrl })),
+    { key: 'blank', name: 'Page blanche', kind: 'blank', cat: 'libre', emoji: '📄', speak: 'Page blanche, dessine ce que tu veux !' },
+    ...PHOTO_PAGES.map((t) => ({ key: `photo-${t.imgKey}`, name: t.name, kind: 'photo', cat: 'photos', src: CHAR_IMGS[t.imgKey], thumb: CHAR_IMGS[t.imgKey], speak: t.name }))
+  ];
+
+  function renderPicker() {
+    const cats = [{ id: 'all', label: 'Tout', emoji: '⭐' }, ...CATS, { id: 'photos', label: 'Mes images', emoji: '📷' }];
+    pickerCats.innerHTML = '';
+    cats.forEach((c) => {
+      const b = document.createElement('button');
+      b.className = 'picker-cat' + (c.id === pickerCat ? ' active' : '');
+      b.innerHTML = `<span>${c.emoji}</span> ${c.label}`;
+      b.addEventListener('pointerdown', () => {
+        pickerCat = c.id;
+        playSoundEffect('pop');
+        renderPicker();
+      });
+      pickerCats.appendChild(b);
+    });
+
+    const done = getDoneSet();
+    pickerGrid.innerHTML = '';
+    let list;
+    if (pickerCat === 'all') list = ALL_PAGES.filter((p) => p.kind !== 'photo');
+    else if (pickerCat === 'photos') list = ALL_PAGES.filter((p) => p.kind === 'photo');
+    else list = ALL_PAGES.filter((p) => p.cat === pickerCat);
+
+    if (pickerCat === 'photos') {
+      const up = document.createElement('button');
+      up.className = 'picker-card picker-upload';
+      up.innerHTML = `<div class="pc-thumb pc-emoji">➕</div><div class="pc-name">Ma photo</div>`;
+      up.addEventListener('pointerdown', () => customInput.click());
+      pickerGrid.appendChild(up);
+    }
+
+    list.forEach((p) => {
+      const card = document.createElement('button');
+      card.className = 'picker-card' + (currentPage && currentPage.key === p.key ? ' active' : '');
+      const thumb = p.thumb
+        ? `<img class="pc-thumb ${p.kind === 'photo' ? 'pc-photo' : ''}" src="${p.thumb}" alt="" draggable="false" />`
+        : `<div class="pc-thumb pc-emoji">${p.emoji}</div>`;
+      const badge = done.has(p.key) ? '<span class="pc-done">⭐</span>' : '';
+      const started = pageMemory[p.key] ? '<span class="pc-started">🖍️</span>' : '';
+      card.innerHTML = `${thumb}${badge}${started}<div class="pc-name">${p.name}</div>`;
+      card.addEventListener('pointerup', () => {
+        closePicker();
+        playSoundEffect('magic');
+        openPage(p);
+      });
+      pickerGrid.appendChild(card);
+    });
+  }
+
+  function openPicker() {
+    renderPicker();
+    pickerOverlay.classList.add('visible');
+    playSoundEffect('pop');
+  }
+
+  function closePicker() {
+    pickerOverlay.classList.remove('visible');
+  }
+
+  document.getElementById('openPickerBtn').addEventListener('pointerdown', openPicker);
+  document.getElementById('pickerClose').addEventListener('pointerdown', closePicker);
+
+  customInput.addEventListener('change', (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      closePicker();
+      openPage({ key: `upload-${Date.now()}`, name: 'Ma photo', kind: 'photo', src: reader.result });
+      playSoundEffect('magic');
+    };
+    reader.readAsDataURL(file);
+    customInput.value = '';
+  });
 
   // --- Initialisation des contrôles du Mode Coloriage ---
   function initColoringUI() {
@@ -1201,7 +1136,6 @@
         btn.style.backgroundColor = col.hex;
         if (col.hex === state.currentColor) btn.classList.add('active');
       }
-
       btn.addEventListener('pointerdown', () => {
         document.querySelectorAll('.color-swatch').forEach((s) => s.classList.remove('active'));
         btn.classList.add('active');
@@ -1214,11 +1148,9 @@
           state.currentColor = col.hex;
           playSoundEffect('pop');
         }
-        if (state.currentTool === 'eraser' || state.currentTool === 'magicreveal') {
-          selectTool('fill');
-        }
+        document.querySelectorAll('.pattern-btn').forEach((b) => b.style.setProperty('--pc', state.isRainbowColor ? '#a855f7' : state.currentColor));
+        if (state.currentTool === 'eraser' || state.currentTool === 'magicreveal') selectTool('fill');
       });
-
       swatchesContainer.appendChild(btn);
     });
 
@@ -1227,7 +1159,9 @@
         selectTool(btn.dataset.tool);
         if (btn.dataset.tool === 'magicreveal') {
           playSoundEffect('magic');
-          showToast('🪄 Frotte le dessin avec ton doigt pour révéler ses vraies couleurs !');
+          showToast(zones ? '🪄 Touche une zone : elle prend la couleur du modèle !' : '🪄 Dessine en arc-en-ciel !');
+        } else if (btn.dataset.tool === 'brush' && zones && state.guard) {
+          showToast('🖌️ Ton pinceau ne déborde pas !');
         }
       });
     });
@@ -1240,6 +1174,31 @@
         playSoundEffect('pop');
       });
     });
+
+    document.querySelectorAll('.pattern-btn').forEach((btn) => {
+      btn.style.setProperty('--pc', state.currentColor);
+      btn.addEventListener('pointerdown', () => {
+        document.querySelectorAll('.pattern-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.pattern = btn.dataset.pattern;
+        if (state.currentTool !== 'fill') selectTool('fill');
+        playSoundEffect('pop');
+        showToast(state.pattern === 'none' ? '🪣 Couleur unie' : '✨ Le pot remplit avec des motifs !');
+      });
+    });
+
+    const guardBtn = document.getElementById('guardBtn');
+    const refreshGuard = () => {
+      guardBtn.classList.toggle('on', state.guard);
+      guardBtn.querySelector('.guard-state').textContent = state.guard ? 'OUI' : 'NON';
+    };
+    guardBtn.addEventListener('pointerdown', () => {
+      state.guard = !state.guard;
+      refreshGuard();
+      playSoundEffect('pop');
+      showToast(state.guard ? '🛡️ Le pinceau reste dans la zone' : '🖌️ Le pinceau peut déborder');
+    });
+    refreshGuard();
 
     const stickerGrid = document.getElementById('stickerGrid');
     STICKERS.forEach((st, idx) => {
@@ -1255,67 +1214,24 @@
       stickerGrid.appendChild(item);
     });
 
-    // Grille des 20 modèles + bouton Importer Photo
-    const templateGrid = document.getElementById('templateGrid');
-    const customInput = document.getElementById('customImageInput');
-
-    // Bouton pour ajouter n'importe quelle nouvelle photo depuis la tablette
-    const uploadCard = document.createElement('button');
-    uploadCard.className = 'template-card';
-    uploadCard.style.borderColor = '#a855f7';
-    uploadCard.style.background = '#faf5ff';
-    uploadCard.innerHTML = `<span class="tpl-emoji">➕</span><span>Ma Photo</span>`;
-    uploadCard.addEventListener('Click', () => customInput.click());
-    uploadCard.addEventListener('pointerdown', () => customInput.click());
-    templateGrid.appendChild(uploadCard);
-
-    customInput.addEventListener('change', (ev) => {
-      const file = ev.target.files && ev.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        document.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
-        uploadCard.classList.add('active');
-        state.currentTemplate = 'custom';
-        loadCharacterImageTemplate(reader.result, 'Ma Photo');
-        playSoundEffect('magic');
-      };
-      reader.readAsDataURL(file);
-    });
-
-    TEMPLATES.forEach((tpl, idx) => {
-      const card = document.createElement('button');
-      card.className = 'template-card' + (idx === 0 ? ' active' : '');
-      if (tpl.imgKey && CHAR_IMGS[tpl.imgKey]) {
-        card.innerHTML = `<img class="tpl-thumb" src="${CHAR_IMGS[tpl.imgKey]}" alt="${tpl.name}" /><span>${tpl.name}</span>`;
-      } else {
-        card.innerHTML = `<span class="tpl-emoji">${tpl.emoji}</span><span>${tpl.name}</span>`;
-      }
-      card.addEventListener('pointerdown', () => {
-        document.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
-        card.classList.add('active');
-        loadTemplate(tpl);
-        playSoundEffect('magic');
-      });
-      templateGrid.appendChild(card);
-    });
-
     document.getElementById('undoBtn').addEventListener('pointerdown', restoreUndoState);
     document.getElementById('clearBtn').addEventListener('pointerdown', () => {
       saveUndoState();
-      colorCtx.fillStyle = '#ffffff';
-      colorCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
+      whitePaper();
+      celebrated = false;
+      if (zones) zones.touched.fill(0);
       compositeCanvas();
+      updateProgress();
       playSoundEffect('undo');
       showToast('🔄 Dessin tout propre !');
     });
     document.getElementById('saveDrawingBtn').addEventListener('pointerdown', (e) => {
-      saveCanvasToGallery(paintCanvas.toDataURL('image/png'), 'Coloriage Magique');
+      saveCanvasToGallery(paintCanvas.toDataURL('image/jpeg', 0.88), currentPage ? currentPage.name : 'Coloriage');
       spawnFloatingBurst(e.clientX, e.clientY, ['📸', '🌟', '🎉', '🦖']);
     });
 
-    // Charger Stitch par défaut !
-    loadTemplate(TEMPLATES[0]);
+    // Premier dessin + ouverture du choix
+    openPage(ALL_PAGES[0]).then(() => setTimeout(openPicker, 300));
   }
 
   function selectTool(toolName) {
@@ -1323,11 +1239,9 @@
     document.querySelectorAll('.tool-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.tool === toolName);
     });
-    const drawer = document.getElementById('stickerDrawer');
-    drawer.classList.toggle('visible', toolName === 'stamp');
+    document.getElementById('stickerDrawer').classList.toggle('visible', toolName === 'stamp');
     playSoundEffect('pop');
   }
-
   // ==========================================================================
   // 4. MODE 2 : MON MONDE DINO & HÉROS (Scène Interactive Tactile)
   // ==========================================================================
@@ -1807,7 +1721,7 @@
         <div class="gallery-card-footer">
           <span style="font-weight:800; font-size:0.85rem;">${item.title} (${item.date})</span>
           <div style="display:flex; gap:6px;">
-            <a href="${item.dataUrl}" download="atelier-magique-${item.id}.png" class="bg-chip" style="text-decoration:none;">⬇️</a>
+            <a href="${item.dataUrl}" download="atelier-magique-${item.id}.${item.dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}" class="bg-chip" style="text-decoration:none;">⬇️</a>
             <button class="bg-chip btn-del-img" style="background:#fee2e2;">🗑️</button>
           </div>
         </div>
