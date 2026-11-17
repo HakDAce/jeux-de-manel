@@ -81,7 +81,7 @@ body.build-walking #walkBuildBtns { display: flex; }
 body.building:not(.build-walking) #hud .build-only { display: flex; }
 body.building #hud .build-or-walk { display: flex; }
 body.monde-mode #hud .monde-only { display: flex; }
-body.monde-building #mondeBuildBtn { background: #fde047; color: #1e1b4b; border-color: #f59e0b; }
+body.monde-building #mondeBuildBtn, body.monde-riding #mondeRideBtn { background: #fde047; color: #1e1b4b; border-color: #f59e0b; }
 
 /* ---------- Barre de construction dans Petit monde ---------- */
 #mondeBuildBar { display: none; }

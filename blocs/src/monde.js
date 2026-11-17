@@ -24,6 +24,7 @@ const MONDE_ITEMS = [
   { id: 'mushroom', icon: '🍄', label: 'Champi' },
   { id: 'bounce', icon: '🦘', label: 'Tremplin' },
   { id: 'lamp', icon: '💡', label: 'Lampe' },
+  { id: 'portal', icon: '🌀', label: 'Portail' },
   { id: 'block', icon: '🟥', label: 'Rouge', color: 0xef4444 },
   { id: 'block', icon: '🟨', label: 'Jaune', color: 0xfacc15 },
   { id: 'block', icon: '🟦', label: 'Bleu', color: 0x3b82f6 },
@@ -485,6 +486,14 @@ export function startMonde({ onExit, hud, onStars }) {
         addBox(0, 2.0, 0, 0.55, 0.55, 0.55, 0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 1.0, plain: true });
         break;
       }
+      case 'portal': {
+        addBox(0, 0.08, 0, 1.5, 0.16, 1.5, 0x6d28d9, { emissive: 0x4c1d95, emissiveIntensity: 0.5 }, 'none');
+        addBox(-0.6, 1.2, 0, 0.22, 2.2, 0.22, 0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.7 }, 'none');
+        addBox(0.6, 1.2, 0, 0.22, 2.2, 0.22, 0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.7 }, 'none');
+        addBox(0, 2.3, 0, 1.44, 0.24, 0.24, 0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.7 }, 'none');
+        addBox(0, 1.2, 0, 1.0, 2.0, 0.08, 0xd8b4fe, { emissive: 0xa855f7, emissiveIntensity: 0.9, opacity: 0.65, plain: true }, 'none');
+        break;
+      }
       default: {
         // Bloc coloré 1×1×1
         addBox(0, 0.5, 0, 1.0, 1.0, 1.0, data.color || 0xef4444);
@@ -871,10 +880,164 @@ export function startMonde({ onExit, hud, onStars }) {
   // Boutons HUD & Barre de construction
   document.body.classList.add('monde-mode');
   const buildToggleBtn = document.getElementById('mondeBuildBtn');
+  const weatherBtn = document.getElementById('mondeWeatherBtn');
+  const feedBtn = document.getElementById('mondeFeedBtn');
+  const rideBtn = document.getElementById('mondeRideBtn');
   const hintBtn = document.getElementById('mondeHintBtn');
   const homeWorldBtn = document.getElementById('mondeHomeBtn');
   const undoBtn = document.getElementById('mondeUndoBtn');
   const resetBtn = document.getElementById('mondeResetBtn');
+
+  // --- 2 Portails de départ (Village <-> Sommet de la Montagne Enneigée) ---
+  const basePortals = [
+    { x: 5, y: 2, z: 3, label: 'Village' },
+    { x: 16, y: hAt(16, -24), z: -24, label: 'Sommet Enneigé' }
+  ];
+  basePortals.forEach((bp) => {
+    const pv = makeEditVisual({ id: 'base_portal', type: 'portal', x: bp.x, y: bp.y, z: bp.z }, []);
+    scene.add(pv.group);
+  });
+  let portalCooldown = 0;
+
+  // --- Petit Bateau automatique quand on va sur l'eau ---
+  const boatGroup = new THREE.Group();
+  boatGroup.add(block(0, 0.15, 0, 1.4, 0.3, 2.2, 0x92400e));
+  boatGroup.add(block(-0.65, 0.42, 0, 0.14, 0.3, 2.2, 0xb45309));
+  boatGroup.add(block(0.65, 0.42, 0, 0.14, 0.3, 2.2, 0xb45309));
+  boatGroup.add(block(0, 0.42, -1.03, 1.4, 0.3, 0.16, 0xb45309));
+  boatGroup.add(block(0, 0.42, 1.03, 1.4, 0.3, 0.16, 0xb45309));
+  boatGroup.add(block(0, 1.25, -0.2, 0.12, 1.8, 0.12, 0x78350f));
+  boatGroup.add(block(0, 1.5, -0.1, 0.95, 1.0, 0.08, 0xffffff, { plain: true }));
+  boatGroup.visible = false;
+  scene.add(boatGroup);
+
+  // --- Météo : Soleil ☀️ / Neige ❄️ / Nuit étoilée 🌠 ---
+  let weather = 'sun'; // 'sun' | 'snow' | 'night'
+  const snowGroup = new THREE.Group();
+  const snowFlakes = [];
+  const snowGeo = boxGeo(0.22, 0.22, 0.22);
+  const snowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (let i = 0; i < 85; i++) {
+    const sf = new THREE.Mesh(snowGeo, snowMat);
+    sf.position.set((Math.random() - 0.5) * 44, Math.random() * 18, (Math.random() - 0.5) * 44);
+    snowGroup.add(sf);
+    snowFlakes.push({ m: sf, vy: 2.6 + Math.random() * 1.8, phase: Math.random() * 6 });
+  }
+  snowGroup.visible = false;
+  scene.add(snowGroup);
+
+  const nightStarsGroup = new THREE.Group();
+  const stGeo = boxGeo(0.45, 0.45, 0.45);
+  const stMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  for (let i = 0; i < 70; i++) {
+    const a = (i * 2.39996) % (Math.PI * 2);
+    const r = 35 + (i % 8) * 7;
+    const sm = new THREE.Mesh(stGeo, stMat);
+    sm.position.set(Math.cos(a) * r, 26 + (i % 5) * 4, Math.sin(a) * r);
+    nightStarsGroup.add(sm);
+  }
+  const shootingStar = new THREE.Mesh(boxGeo(1.2, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0xfde047 }));
+  shootingStar.position.set(0, 32, -30);
+  nightStarsGroup.add(shootingStar);
+  nightStarsGroup.visible = false;
+  scene.add(nightStarsGroup);
+
+  const onWeather = (e) => {
+    e.stopPropagation();
+    const order = ['sun', 'snow', 'night'];
+    weather = order[(order.indexOf(weather) + 1) % order.length];
+    if (weather === 'sun') {
+      scene.background.setHex(0x8fd3ff);
+      scene.fog.color.setHex(0x8fd3ff);
+      if (scene.userData.hemi) scene.userData.hemi.intensity = 1.6;
+      if (scene.userData.sun) scene.userData.sun.intensity = 2.2;
+      snowGroup.visible = false;
+      nightStarsGroup.visible = false;
+      if (weatherBtn) weatherBtn.textContent = '☀️';
+      toast('☀️ Grand soleil sur l’île !');
+    } else if (weather === 'snow') {
+      scene.background.setHex(0xcbd5e1);
+      scene.fog.color.setHex(0xcbd5e1);
+      if (scene.userData.hemi) scene.userData.hemi.intensity = 1.5;
+      if (scene.userData.sun) scene.userData.sun.intensity = 1.6;
+      snowGroup.visible = true;
+      nightStarsGroup.visible = false;
+      if (weatherBtn) weatherBtn.textContent = '❄️';
+      toast('❄️ Il neige sur toute l’île !');
+    } else {
+      scene.background.setHex(0x0f172a);
+      scene.fog.color.setHex(0x0f172a);
+      if (scene.userData.hemi) scene.userData.hemi.intensity = 0.65;
+      if (scene.userData.sun) scene.userData.sun.intensity = 0.55;
+      snowGroup.visible = false;
+      nightStarsGroup.visible = true;
+      if (weatherBtn) weatherBtn.textContent = '🌠';
+      toast('🌠 Nuit d’étoiles filantes !');
+    }
+    sfx('light');
+  };
+
+  // --- Nourrir les animaux (🍎) : petits cœurs 3D + couronne dorée ---
+  const heartParticles = [];
+  const heartGeo = boxGeo(0.28, 0.28, 0.28);
+  const heartMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+
+  const onFeed = (e) => {
+    e.stopPropagation();
+    const myFriends = animals.filter((a) => a.friend);
+    const targetList = myFriends.length ? myFriends : animals;
+    sfx('eat');
+    targetList.forEach((a) => {
+      if (!a.crowned) {
+        a.crowned = true;
+        const cr = block(0, 1.68 * a.def.size, 0.8 * a.def.size, 0.36 * a.def.size, 0.18 * a.def.size, 0.36 * a.def.size, 0xfacc15, { plain: true });
+        a.g.add(cr);
+      }
+      a.g.position.y += 0.9;
+      for (let i = 0; i < 4; i++) {
+        const hm = new THREE.Mesh(heartGeo, heartMat);
+        hm.position.set(
+          a.g.position.x + (Math.random() - 0.5) * 0.9,
+          a.g.position.y + 1.3 + Math.random() * 0.4,
+          a.g.position.z + (Math.random() - 0.5) * 0.9
+        );
+        scene.add(hm);
+        heartParticles.push({ m: hm, vy: 2.2 + Math.random() * 1.5, life: 1.3 });
+      }
+    });
+    toast(myFriends.length ? '🍎 Miam ! Tes amis animaux te remercient 💖' : '🍎 Trouve un animal sur l’île pour qu’il devienne ton ami !');
+    speak('Miam ! Tes animaux sont super contents !');
+  };
+
+  // --- Monter sur le dos d'un animal ami (🦖) ---
+  let ridingAnimal = null;
+  const onRide = (e) => {
+    e.stopPropagation();
+    if (ridingAnimal) {
+      ridingAnimal = null;
+      P.jumpV = 9.6;
+      document.body.classList.remove('monde-riding');
+      sfx('pop');
+      toast('🚶 Tu marches à pied.');
+      return;
+    }
+    const dinoFriend = animals.find((a) => a.friend && a.def.id === 'dino');
+    const anyFriend = dinoFriend || animals.find((a) => a.friend) || animals.find((a) => a.def.id === 'dino');
+    if (!anyFriend) return;
+    anyFriend.friend = true;
+    if (!save.friends.includes(anyFriend.def.id)) {
+      anyFriend.slot = friendCount++;
+      save.friends.push(anyFriend.def.id);
+      persist();
+      hudText();
+    }
+    ridingAnimal = anyFriend;
+    P.jumpV = 12.2;
+    document.body.classList.add('monde-riding');
+    sfx('bounce');
+    toast(`🦖 En selle sur ${ridingAnimal.def.name} ! Tu cours et sautes plus haut !`);
+    speak(`En selle sur ${ridingAnimal.def.name} !`);
+  };
 
   function setMondeBuild(on) {
     mondeBuildOn = on;
@@ -948,6 +1111,9 @@ export function startMonde({ onExit, hud, onStars }) {
   });
 
   if (buildToggleBtn) buildToggleBtn.addEventListener('pointerdown', onToggleBuild);
+  if (weatherBtn) weatherBtn.addEventListener('pointerdown', onWeather);
+  if (feedBtn) feedBtn.addEventListener('pointerdown', onFeed);
+  if (rideBtn) rideBtn.addEventListener('pointerdown', onRide);
   if (hintBtn) hintBtn.addEventListener('pointerdown', onHint);
   if (homeWorldBtn) homeWorldBtn.addEventListener('pointerdown', onGoHome);
   if (undoBtn) undoBtn.addEventListener('pointerdown', onUndo);
@@ -959,11 +1125,80 @@ export function startMonde({ onExit, hud, onStars }) {
       stepPlayer(P, world, dt);
       if (P.pos.y < -5) goHome(false);
     }
-    P.speed = P.pos.y < WATER - 0.2 ? 3.8 : 7.2;
+
+    // Petit Bateau automatique sur l'eau OU monture Dino / Animal
+    const onWater = P.pos.y < WATER - 0.12;
+    boatGroup.visible = onWater && !ridingAnimal;
+    if (onWater && !ridingAnimal) {
+      boatGroup.position.set(P.pos.x, WATER - 0.05, P.pos.z);
+      boatGroup.rotation.y = P.facing;
+      P.speed = 8.8;
+    } else if (ridingAnimal) {
+      P.speed = 9.2;
+    } else {
+      P.speed = 7.2;
+    }
+
     syncAvatar(P, dt);
+    if (ridingAnimal) {
+      ridingAnimal.g.position.set(P.pos.x, P.pos.y, P.pos.z);
+      ridingAnimal.g.rotation.y = P.facing;
+      P.avatar.position.y = P.pos.y + 0.72 * ridingAnimal.def.size;
+      const moveSpd = Math.hypot(P.vel.x, P.vel.z);
+      const sw = moveSpd > 0.3 ? Math.sin(t * 14) * 0.55 : 0;
+      ridingAnimal.g.userData.legs.forEach((l, i) => { l.rotation.x = i === 0 || i === 3 ? sw : -sw; });
+    }
+
     followCamera(P, dt, false, world);
     followSun(scene, P.pos);
     water.position.y = WATER + Math.sin(t * 1.2) * 0.04;
+
+    // Animation météo : Neige ❄️ & Étoiles filantes 🌠
+    if (weather === 'snow') {
+      snowGroup.position.set(P.pos.x, 0, P.pos.z);
+      snowFlakes.forEach((sf) => {
+        sf.m.position.y -= sf.vy * dt;
+        sf.m.position.x += Math.sin(t * 1.5 + sf.phase) * 0.6 * dt;
+        if (sf.m.position.y < 0) sf.m.position.y = 18;
+      });
+    } else if (weather === 'night') {
+      nightStarsGroup.position.set(P.pos.x, 0, P.pos.z);
+      const stCycle = (t * 18) % 60;
+      shootingStar.position.set(-30 + stCycle, 34 - stCycle * 0.25, -28);
+    }
+
+    // Particules cœurs (🍎 Nourrir)
+    for (let i = heartParticles.length - 1; i >= 0; i--) {
+      const hp = heartParticles[i];
+      hp.life -= dt;
+      if (hp.life <= 0) {
+        scene.remove(hp.m);
+        heartParticles.splice(i, 1);
+        continue;
+      }
+      hp.m.position.y += hp.vy * dt;
+      hp.m.rotation.y += 4 * dt;
+    }
+
+    // Téléportation par Portails Magiques 🌀
+    if (portalCooldown > 0) portalCooldown -= dt;
+    else {
+      const allPortals = [
+        ...basePortals,
+        ...save.worldEdits.filter((e) => e.type === 'portal')
+      ];
+      if (allPortals.length >= 2) {
+        const hitIdx = allPortals.findIndex((pt) => Math.hypot(pt.x - P.pos.x, pt.z - P.pos.z) < 1.15 && Math.abs(pt.y - P.pos.y) < 1.8);
+        if (hitIdx !== -1) {
+          const dest = allPortals[(hitIdx + 1) % allPortals.length];
+          P.pos.set(dest.x, dest.y + 0.1, dest.z + 1.4);
+          P.vel.set(0, 0, 0);
+          portalCooldown = 2.5;
+          sfx('teleport');
+          toast('🌀 Téléportation magique !');
+        }
+      }
+    }
 
     if (beaconTimer > 0) {
       beaconTimer -= dt;
@@ -1023,6 +1258,7 @@ export function startMonde({ onExit, hud, onStars }) {
     });
 
     animals.forEach((a) => {
+      if (a === ridingAnimal) return;
       const g = a.g;
       let goal = null;
       let speed = 1.6;
@@ -1095,9 +1331,12 @@ export function startMonde({ onExit, hud, onStars }) {
     player: P,
     debug: { gems, chests, animals, hAt },
     dispose() {
-      document.body.classList.remove('monde-mode', 'monde-building');
+      document.body.classList.remove('monde-mode', 'monde-building', 'monde-riding');
       input.onTap = null;
       if (buildToggleBtn) buildToggleBtn.removeEventListener('pointerdown', onToggleBuild);
+      if (weatherBtn) weatherBtn.removeEventListener('pointerdown', onWeather);
+      if (feedBtn) feedBtn.removeEventListener('pointerdown', onFeed);
+      if (rideBtn) rideBtn.removeEventListener('pointerdown', onRide);
       if (hintBtn) hintBtn.removeEventListener('pointerdown', onHint);
       if (homeWorldBtn) homeWorldBtn.removeEventListener('pointerdown', onGoHome);
       if (undoBtn) undoBtn.removeEventListener('pointerdown', onUndo);

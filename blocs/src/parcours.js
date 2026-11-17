@@ -109,6 +109,42 @@ export const LEVELS = [
       [0, 0, -5.5, 4, 5, { gate: 1 }],
       [0, 0, -6, 7, 7, { finish: 1, castle: 1 }]
     ]
+  },
+  {
+    name: 'Lune Magique (Sauts géants)', emoji: '🌙', sky: 0x0f172a, lowGravity: true, colors: [0x38bdf8, 0x818cf8, 0xc084fc],
+    steps: [
+      [0, 1.5, -7, 3.5, 3.5, { coin: 1 }],
+      [2.5, 2, -7.5, 3, 3, { coin: 1 }],
+      [-2.5, 2, -7.5, 3, 3, {}],
+      [0, 0, -7, 4.5, 4.5, { cp: 1 }],
+      [0, 1.5, -7.5, 3, 3, { move: ['x', 3.5, 0.8], coin: 1 }],
+      [0, 2, -8, 3, 3, {}],
+      [0, 0, -6.5, 4, 5, { gate: 1 }],
+      [0, 0, -6, 3, 3, { bounce: 1 }],
+      [0, 6.5, -8, 3.5, 3.5, { coin: 1 }],
+      [0, 0, -7, 4.5, 4.5, { cp: 1 }],
+      [3.5, 1.5, -6.5, 3, 3, { coin: 1 }],
+      [-3.5, 1.5, -6.5, 3, 3, {}],
+      [0, 2, -8, 7, 7, { finish: 1, castle: 1 }]
+    ]
+  },
+  {
+    name: 'Bateau Pirate', emoji: '🏴‍☠️', sky: 0x38bdf8, lavaSea: false, colors: [0xb45309, 0x92400e, 0xd97706],
+    steps: [
+      [0, 0, -5.5, 4, 6, { coin: 1 }],
+      [0, 0.5, -5.5, 2, 5, {}],
+      [0, 0.5, -5.5, 5, 5, { cp: 1 }],
+      [0, 0, -5, 3, 3, { bounce: 1 }],
+      [0, 4.5, -5.5, 4, 6, { coin: 1 }],
+      [0, 0, -5.5, 3, 3, { move: ['x', 3.5, 0.85], coin: 1 }],
+      [0, 0, -5.5, 4, 5, { gate: 1 }],
+      [0, 0, -5.5, 4.5, 4.5, { cp: 1 }],
+      [3, 0.8, -4, 3, 3, { coin: 1 }],
+      [-3, 0.8, -4, 3, 3, {}],
+      [0, 0.8, -5, 3, 3, { bounce: 1 }],
+      [0, 4.8, -5.5, 4, 5, { gate: 1 }],
+      [0, 0, -6, 7, 7, { finish: 1, castle: 1 }]
+    ]
   }
 ];
 
@@ -238,6 +274,10 @@ export function startParcours(levelIdx, { onExit, onNext, hud }) {
   // --- Joueur ---
   const P = createPlayer(scene);
   P.stepH = 0.35;
+  if (L.lowGravity) {
+    P.gravity = 13;
+    P.jumpV = 10.6;
+  }
   const world = {
     boxesNear(x0, y0, z0, x1, y1, z1) {
       return solids.filter((b) => b.x1 > x0 && b.x0 < x1 && b.y1 > y0 && b.y0 < y1 && b.z1 > z0 && b.z0 < z1);

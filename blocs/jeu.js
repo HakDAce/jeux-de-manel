@@ -4504,6 +4504,8 @@ function sfx(name) {
     case 'splash': tone(440, 0.14, 'sine', 0.11, 0, 260); break;
     case 'confetti': [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'triangle', 0.14, i * 0.05)); break;
     case 'light': tone(740, 0.15, 'sine', 0.14, 0, 220); break;
+    case 'eat': [587, 740, 880].forEach((f, i) => tone(f, 0.12, 'sine', 0.15, i * 0.07)); break;
+    case 'teleport': [440, 554, 659, 880, 1175].forEach((f, i) => tone(f, 0.14, 'sine', 0.14, i * 0.05)); break;
     default: break;
   }
 }
@@ -4705,8 +4707,11 @@ const HATS = [
   { id: 'cap', label: 'Casquette', cost: 0 },
   { id: 'hair', label: 'Couettes', cost: 0 },
   { id: 'cat', label: 'Oreilles de chat', cost: 10 },
+  { id: 'glasses', label: 'Lunettes étoiles', cost: 15 },
   { id: 'crown', label: 'Couronne', cost: 25 },
+  { id: 'cape', label: 'Cape magique', cost: 35 },
   { id: 'dino', label: 'Crête de dino', cost: 40 },
+  { id: 'wings', label: 'Ailes de fée', cost: 50 },
   { id: 'unicorn', label: 'Corne de licorne', cost: 60 }
 ];
 const SHIRTS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#ec4899', '#a855f7', '#14b8a6', '#ffffff', '#1f2937'];
@@ -4797,6 +4802,32 @@ function makeAvatar(o = save.outfit) {
       head.add(horn);
       add(0.12, 0.14, 0.1, '#f9a8d4', -0.2, 0.36, 0);
       add(0.12, 0.14, 0.1, '#c4b5fd', 0.2, 0.36, 0);
+      break;
+    }
+    case 'glasses': {
+      add(0.54, 0.06, 0.06, '#facc15', 0, 0.05, 0.26);
+      add(0.18, 0.16, 0.06, '#ec4899', -0.14, 0.05, 0.27);
+      add(0.18, 0.16, 0.06, '#ec4899', 0.14, 0.05, 0.27);
+      break;
+    }
+    case 'cape': {
+      const cape = part(0.62, 0.85, 0.06, lam('#ef4444'));
+      cape.position.set(0, 0.98, -0.22);
+      cape.rotation.x = 0.18;
+      root.add(cape);
+      add(0.46, 0.1, 0.46, '#facc15', 0, 0.36, 0);
+      break;
+    }
+    case 'wings': {
+      const wMat = new THREE.MeshLambertMaterial({ color: 0xf9a8d4, emissive: 0xec4899, emissiveIntensity: 0.3, transparent: true, opacity: 0.82 });
+      const wL = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.05), wMat);
+      wL.position.set(-0.34, 1.15, -0.22);
+      wL.rotation.y = 0.35;
+      const wR = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.05), wMat);
+      wR.position.set(0.34, 1.15, -0.22);
+      wR.rotation.y = -0.35;
+      root.add(wL, wR);
+      add(0.42, 0.1, 0.42, '#fde047', 0, 0.36, 0);
       break;
     }
     default: break;
@@ -5119,7 +5150,8 @@ function stepPlayer(P, world, dt) {
 }
 
 function substep(P, world, h) {
-  P.vel.y = Math.max(-28, P.vel.y - 26 * h);
+  const grav = P.gravity || 26;
+  P.vel.y = Math.max(-28, P.vel.y - grav * h);
   const p = P.pos;
   const boxes = world.boxesNear(p.x - 2, p.y - 2, p.z - 2, p.x + 2, p.y + HGT + 2, p.z + 2);
   const wasGround = P.onGround;
@@ -5322,6 +5354,42 @@ const LEVELS = [
       [0, 0, -5.5, 4, 5, { gate: 1 }],
       [0, 0, -6, 7, 7, { finish: 1, castle: 1 }]
     ]
+  },
+  {
+    name: 'Lune Magique (Sauts géants)', emoji: '🌙', sky: 0x0f172a, lowGravity: true, colors: [0x38bdf8, 0x818cf8, 0xc084fc],
+    steps: [
+      [0, 1.5, -7, 3.5, 3.5, { coin: 1 }],
+      [2.5, 2, -7.5, 3, 3, { coin: 1 }],
+      [-2.5, 2, -7.5, 3, 3, {}],
+      [0, 0, -7, 4.5, 4.5, { cp: 1 }],
+      [0, 1.5, -7.5, 3, 3, { move: ['x', 3.5, 0.8], coin: 1 }],
+      [0, 2, -8, 3, 3, {}],
+      [0, 0, -6.5, 4, 5, { gate: 1 }],
+      [0, 0, -6, 3, 3, { bounce: 1 }],
+      [0, 6.5, -8, 3.5, 3.5, { coin: 1 }],
+      [0, 0, -7, 4.5, 4.5, { cp: 1 }],
+      [3.5, 1.5, -6.5, 3, 3, { coin: 1 }],
+      [-3.5, 1.5, -6.5, 3, 3, {}],
+      [0, 2, -8, 7, 7, { finish: 1, castle: 1 }]
+    ]
+  },
+  {
+    name: 'Bateau Pirate', emoji: '🏴‍☠️', sky: 0x38bdf8, lavaSea: false, colors: [0xb45309, 0x92400e, 0xd97706],
+    steps: [
+      [0, 0, -5.5, 4, 6, { coin: 1 }],
+      [0, 0.5, -5.5, 2, 5, {}],
+      [0, 0.5, -5.5, 5, 5, { cp: 1 }],
+      [0, 0, -5, 3, 3, { bounce: 1 }],
+      [0, 4.5, -5.5, 4, 6, { coin: 1 }],
+      [0, 0, -5.5, 3, 3, { move: ['x', 3.5, 0.85], coin: 1 }],
+      [0, 0, -5.5, 4, 5, { gate: 1 }],
+      [0, 0, -5.5, 4.5, 4.5, { cp: 1 }],
+      [3, 0.8, -4, 3, 3, { coin: 1 }],
+      [-3, 0.8, -4, 3, 3, {}],
+      [0, 0.8, -5, 3, 3, { bounce: 1 }],
+      [0, 4.8, -5.5, 4, 5, { gate: 1 }],
+      [0, 0, -6, 7, 7, { finish: 1, castle: 1 }]
+    ]
   }
 ];
 
@@ -5451,6 +5519,10 @@ function startParcours(levelIdx, { onExit, onNext, hud }) {
   // --- Joueur ---
   const P = createPlayer(scene);
   P.stepH = 0.35;
+  if (L.lowGravity) {
+    P.gravity = 13;
+    P.jumpV = 10.6;
+  }
   const world = {
     boxesNear(x0, y0, z0, x1, y1, z1) {
       return solids.filter((b) => b.x1 > x0 && b.x0 < x1 && b.y1 > y0 && b.y0 < y1 && b.z1 > z0 && b.z0 < z1);
@@ -5648,6 +5720,7 @@ const MONDE_ITEMS = [
   { id: 'mushroom', icon: '🍄', label: 'Champi' },
   { id: 'bounce', icon: '🦘', label: 'Tremplin' },
   { id: 'lamp', icon: '💡', label: 'Lampe' },
+  { id: 'portal', icon: '🌀', label: 'Portail' },
   { id: 'block', icon: '🟥', label: 'Rouge', color: 0xef4444 },
   { id: 'block', icon: '🟨', label: 'Jaune', color: 0xfacc15 },
   { id: 'block', icon: '🟦', label: 'Bleu', color: 0x3b82f6 },
@@ -6109,6 +6182,14 @@ function startMonde({ onExit, hud, onStars }) {
         addBox(0, 2.0, 0, 0.55, 0.55, 0.55, 0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 1.0, plain: true });
         break;
       }
+      case 'portal': {
+        addBox(0, 0.08, 0, 1.5, 0.16, 1.5, 0x6d28d9, { emissive: 0x4c1d95, emissiveIntensity: 0.5 }, 'none');
+        addBox(-0.6, 1.2, 0, 0.22, 2.2, 0.22, 0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.7 }, 'none');
+        addBox(0.6, 1.2, 0, 0.22, 2.2, 0.22, 0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.7 }, 'none');
+        addBox(0, 2.3, 0, 1.44, 0.24, 0.24, 0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.7 }, 'none');
+        addBox(0, 1.2, 0, 1.0, 2.0, 0.08, 0xd8b4fe, { emissive: 0xa855f7, emissiveIntensity: 0.9, opacity: 0.65, plain: true }, 'none');
+        break;
+      }
       default: {
         // Bloc coloré 1×1×1
         addBox(0, 0.5, 0, 1.0, 1.0, 1.0, data.color || 0xef4444);
@@ -6495,10 +6576,164 @@ function startMonde({ onExit, hud, onStars }) {
   // Boutons HUD & Barre de construction
   document.body.classList.add('monde-mode');
   const buildToggleBtn = document.getElementById('mondeBuildBtn');
+  const weatherBtn = document.getElementById('mondeWeatherBtn');
+  const feedBtn = document.getElementById('mondeFeedBtn');
+  const rideBtn = document.getElementById('mondeRideBtn');
   const hintBtn = document.getElementById('mondeHintBtn');
   const homeWorldBtn = document.getElementById('mondeHomeBtn');
   const undoBtn = document.getElementById('mondeUndoBtn');
   const resetBtn = document.getElementById('mondeResetBtn');
+
+  // --- 2 Portails de départ (Village <-> Sommet de la Montagne Enneigée) ---
+  const basePortals = [
+    { x: 5, y: 2, z: 3, label: 'Village' },
+    { x: 16, y: hAt(16, -24), z: -24, label: 'Sommet Enneigé' }
+  ];
+  basePortals.forEach((bp) => {
+    const pv = makeEditVisual({ id: 'base_portal', type: 'portal', x: bp.x, y: bp.y, z: bp.z }, []);
+    scene.add(pv.group);
+  });
+  let portalCooldown = 0;
+
+  // --- Petit Bateau automatique quand on va sur l'eau ---
+  const boatGroup = new THREE.Group();
+  boatGroup.add(block(0, 0.15, 0, 1.4, 0.3, 2.2, 0x92400e));
+  boatGroup.add(block(-0.65, 0.42, 0, 0.14, 0.3, 2.2, 0xb45309));
+  boatGroup.add(block(0.65, 0.42, 0, 0.14, 0.3, 2.2, 0xb45309));
+  boatGroup.add(block(0, 0.42, -1.03, 1.4, 0.3, 0.16, 0xb45309));
+  boatGroup.add(block(0, 0.42, 1.03, 1.4, 0.3, 0.16, 0xb45309));
+  boatGroup.add(block(0, 1.25, -0.2, 0.12, 1.8, 0.12, 0x78350f));
+  boatGroup.add(block(0, 1.5, -0.1, 0.95, 1.0, 0.08, 0xffffff, { plain: true }));
+  boatGroup.visible = false;
+  scene.add(boatGroup);
+
+  // --- Météo : Soleil ☀️ / Neige ❄️ / Nuit étoilée 🌠 ---
+  let weather = 'sun'; // 'sun' | 'snow' | 'night'
+  const snowGroup = new THREE.Group();
+  const snowFlakes = [];
+  const snowGeo = boxGeo(0.22, 0.22, 0.22);
+  const snowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (let i = 0; i < 85; i++) {
+    const sf = new THREE.Mesh(snowGeo, snowMat);
+    sf.position.set((Math.random() - 0.5) * 44, Math.random() * 18, (Math.random() - 0.5) * 44);
+    snowGroup.add(sf);
+    snowFlakes.push({ m: sf, vy: 2.6 + Math.random() * 1.8, phase: Math.random() * 6 });
+  }
+  snowGroup.visible = false;
+  scene.add(snowGroup);
+
+  const nightStarsGroup = new THREE.Group();
+  const stGeo = boxGeo(0.45, 0.45, 0.45);
+  const stMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  for (let i = 0; i < 70; i++) {
+    const a = (i * 2.39996) % (Math.PI * 2);
+    const r = 35 + (i % 8) * 7;
+    const sm = new THREE.Mesh(stGeo, stMat);
+    sm.position.set(Math.cos(a) * r, 26 + (i % 5) * 4, Math.sin(a) * r);
+    nightStarsGroup.add(sm);
+  }
+  const shootingStar = new THREE.Mesh(boxGeo(1.2, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0xfde047 }));
+  shootingStar.position.set(0, 32, -30);
+  nightStarsGroup.add(shootingStar);
+  nightStarsGroup.visible = false;
+  scene.add(nightStarsGroup);
+
+  const onWeather = (e) => {
+    e.stopPropagation();
+    const order = ['sun', 'snow', 'night'];
+    weather = order[(order.indexOf(weather) + 1) % order.length];
+    if (weather === 'sun') {
+      scene.background.setHex(0x8fd3ff);
+      scene.fog.color.setHex(0x8fd3ff);
+      if (scene.userData.hemi) scene.userData.hemi.intensity = 1.6;
+      if (scene.userData.sun) scene.userData.sun.intensity = 2.2;
+      snowGroup.visible = false;
+      nightStarsGroup.visible = false;
+      if (weatherBtn) weatherBtn.textContent = '☀️';
+      toast('☀️ Grand soleil sur l’île !');
+    } else if (weather === 'snow') {
+      scene.background.setHex(0xcbd5e1);
+      scene.fog.color.setHex(0xcbd5e1);
+      if (scene.userData.hemi) scene.userData.hemi.intensity = 1.5;
+      if (scene.userData.sun) scene.userData.sun.intensity = 1.6;
+      snowGroup.visible = true;
+      nightStarsGroup.visible = false;
+      if (weatherBtn) weatherBtn.textContent = '❄️';
+      toast('❄️ Il neige sur toute l’île !');
+    } else {
+      scene.background.setHex(0x0f172a);
+      scene.fog.color.setHex(0x0f172a);
+      if (scene.userData.hemi) scene.userData.hemi.intensity = 0.65;
+      if (scene.userData.sun) scene.userData.sun.intensity = 0.55;
+      snowGroup.visible = false;
+      nightStarsGroup.visible = true;
+      if (weatherBtn) weatherBtn.textContent = '🌠';
+      toast('🌠 Nuit d’étoiles filantes !');
+    }
+    sfx('light');
+  };
+
+  // --- Nourrir les animaux (🍎) : petits cœurs 3D + couronne dorée ---
+  const heartParticles = [];
+  const heartGeo = boxGeo(0.28, 0.28, 0.28);
+  const heartMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+
+  const onFeed = (e) => {
+    e.stopPropagation();
+    const myFriends = animals.filter((a) => a.friend);
+    const targetList = myFriends.length ? myFriends : animals;
+    sfx('eat');
+    targetList.forEach((a) => {
+      if (!a.crowned) {
+        a.crowned = true;
+        const cr = block(0, 1.68 * a.def.size, 0.8 * a.def.size, 0.36 * a.def.size, 0.18 * a.def.size, 0.36 * a.def.size, 0xfacc15, { plain: true });
+        a.g.add(cr);
+      }
+      a.g.position.y += 0.9;
+      for (let i = 0; i < 4; i++) {
+        const hm = new THREE.Mesh(heartGeo, heartMat);
+        hm.position.set(
+          a.g.position.x + (Math.random() - 0.5) * 0.9,
+          a.g.position.y + 1.3 + Math.random() * 0.4,
+          a.g.position.z + (Math.random() - 0.5) * 0.9
+        );
+        scene.add(hm);
+        heartParticles.push({ m: hm, vy: 2.2 + Math.random() * 1.5, life: 1.3 });
+      }
+    });
+    toast(myFriends.length ? '🍎 Miam ! Tes amis animaux te remercient 💖' : '🍎 Trouve un animal sur l’île pour qu’il devienne ton ami !');
+    speak('Miam ! Tes animaux sont super contents !');
+  };
+
+  // --- Monter sur le dos d'un animal ami (🦖) ---
+  let ridingAnimal = null;
+  const onRide = (e) => {
+    e.stopPropagation();
+    if (ridingAnimal) {
+      ridingAnimal = null;
+      P.jumpV = 9.6;
+      document.body.classList.remove('monde-riding');
+      sfx('pop');
+      toast('🚶 Tu marches à pied.');
+      return;
+    }
+    const dinoFriend = animals.find((a) => a.friend && a.def.id === 'dino');
+    const anyFriend = dinoFriend || animals.find((a) => a.friend) || animals.find((a) => a.def.id === 'dino');
+    if (!anyFriend) return;
+    anyFriend.friend = true;
+    if (!save.friends.includes(anyFriend.def.id)) {
+      anyFriend.slot = friendCount++;
+      save.friends.push(anyFriend.def.id);
+      persist();
+      hudText();
+    }
+    ridingAnimal = anyFriend;
+    P.jumpV = 12.2;
+    document.body.classList.add('monde-riding');
+    sfx('bounce');
+    toast(`🦖 En selle sur ${ridingAnimal.def.name} ! Tu cours et sautes plus haut !`);
+    speak(`En selle sur ${ridingAnimal.def.name} !`);
+  };
 
   function setMondeBuild(on) {
     mondeBuildOn = on;
@@ -6572,6 +6807,9 @@ function startMonde({ onExit, hud, onStars }) {
   });
 
   if (buildToggleBtn) buildToggleBtn.addEventListener('pointerdown', onToggleBuild);
+  if (weatherBtn) weatherBtn.addEventListener('pointerdown', onWeather);
+  if (feedBtn) feedBtn.addEventListener('pointerdown', onFeed);
+  if (rideBtn) rideBtn.addEventListener('pointerdown', onRide);
   if (hintBtn) hintBtn.addEventListener('pointerdown', onHint);
   if (homeWorldBtn) homeWorldBtn.addEventListener('pointerdown', onGoHome);
   if (undoBtn) undoBtn.addEventListener('pointerdown', onUndo);
@@ -6583,11 +6821,80 @@ function startMonde({ onExit, hud, onStars }) {
       stepPlayer(P, world, dt);
       if (P.pos.y < -5) goHome(false);
     }
-    P.speed = P.pos.y < WATER - 0.2 ? 3.8 : 7.2;
+
+    // Petit Bateau automatique sur l'eau OU monture Dino / Animal
+    const onWater = P.pos.y < WATER - 0.12;
+    boatGroup.visible = onWater && !ridingAnimal;
+    if (onWater && !ridingAnimal) {
+      boatGroup.position.set(P.pos.x, WATER - 0.05, P.pos.z);
+      boatGroup.rotation.y = P.facing;
+      P.speed = 8.8;
+    } else if (ridingAnimal) {
+      P.speed = 9.2;
+    } else {
+      P.speed = 7.2;
+    }
+
     syncAvatar(P, dt);
+    if (ridingAnimal) {
+      ridingAnimal.g.position.set(P.pos.x, P.pos.y, P.pos.z);
+      ridingAnimal.g.rotation.y = P.facing;
+      P.avatar.position.y = P.pos.y + 0.72 * ridingAnimal.def.size;
+      const moveSpd = Math.hypot(P.vel.x, P.vel.z);
+      const sw = moveSpd > 0.3 ? Math.sin(t * 14) * 0.55 : 0;
+      ridingAnimal.g.userData.legs.forEach((l, i) => { l.rotation.x = i === 0 || i === 3 ? sw : -sw; });
+    }
+
     followCamera(P, dt, false, world);
     followSun(scene, P.pos);
     water.position.y = WATER + Math.sin(t * 1.2) * 0.04;
+
+    // Animation météo : Neige ❄️ & Étoiles filantes 🌠
+    if (weather === 'snow') {
+      snowGroup.position.set(P.pos.x, 0, P.pos.z);
+      snowFlakes.forEach((sf) => {
+        sf.m.position.y -= sf.vy * dt;
+        sf.m.position.x += Math.sin(t * 1.5 + sf.phase) * 0.6 * dt;
+        if (sf.m.position.y < 0) sf.m.position.y = 18;
+      });
+    } else if (weather === 'night') {
+      nightStarsGroup.position.set(P.pos.x, 0, P.pos.z);
+      const stCycle = (t * 18) % 60;
+      shootingStar.position.set(-30 + stCycle, 34 - stCycle * 0.25, -28);
+    }
+
+    // Particules cœurs (🍎 Nourrir)
+    for (let i = heartParticles.length - 1; i >= 0; i--) {
+      const hp = heartParticles[i];
+      hp.life -= dt;
+      if (hp.life <= 0) {
+        scene.remove(hp.m);
+        heartParticles.splice(i, 1);
+        continue;
+      }
+      hp.m.position.y += hp.vy * dt;
+      hp.m.rotation.y += 4 * dt;
+    }
+
+    // Téléportation par Portails Magiques 🌀
+    if (portalCooldown > 0) portalCooldown -= dt;
+    else {
+      const allPortals = [
+        ...basePortals,
+        ...save.worldEdits.filter((e) => e.type === 'portal')
+      ];
+      if (allPortals.length >= 2) {
+        const hitIdx = allPortals.findIndex((pt) => Math.hypot(pt.x - P.pos.x, pt.z - P.pos.z) < 1.15 && Math.abs(pt.y - P.pos.y) < 1.8);
+        if (hitIdx !== -1) {
+          const dest = allPortals[(hitIdx + 1) % allPortals.length];
+          P.pos.set(dest.x, dest.y + 0.1, dest.z + 1.4);
+          P.vel.set(0, 0, 0);
+          portalCooldown = 2.5;
+          sfx('teleport');
+          toast('🌀 Téléportation magique !');
+        }
+      }
+    }
 
     if (beaconTimer > 0) {
       beaconTimer -= dt;
@@ -6647,6 +6954,7 @@ function startMonde({ onExit, hud, onStars }) {
     });
 
     animals.forEach((a) => {
+      if (a === ridingAnimal) return;
       const g = a.g;
       let goal = null;
       let speed = 1.6;
@@ -6719,9 +7027,12 @@ function startMonde({ onExit, hud, onStars }) {
     player: P,
     debug: { gems, chests, animals, hAt },
     dispose() {
-      document.body.classList.remove('monde-mode', 'monde-building');
+      document.body.classList.remove('monde-mode', 'monde-building', 'monde-riding');
       input.onTap = null;
       if (buildToggleBtn) buildToggleBtn.removeEventListener('pointerdown', onToggleBuild);
+      if (weatherBtn) weatherBtn.removeEventListener('pointerdown', onWeather);
+      if (feedBtn) feedBtn.removeEventListener('pointerdown', onFeed);
+      if (rideBtn) rideBtn.removeEventListener('pointerdown', onRide);
       if (hintBtn) hintBtn.removeEventListener('pointerdown', onHint);
       if (homeWorldBtn) homeWorldBtn.removeEventListener('pointerdown', onGoHome);
       if (undoBtn) undoBtn.removeEventListener('pointerdown', onUndo);
@@ -6738,13 +7049,14 @@ const __mod_construction = (() => {
 // ============================================================================
 // MODE CONSTRUCTION : poser / enlever / peindre / tracer / miroirs / blocs magiques
 // ============================================================================
-const { THREE, newScene, followSun, boxGeo, mat, save, persist, camera, renderer, createPlayer, stepPlayer, syncAvatar, followCamera, cam, input, sfx, speak, toast, ui, resetInput, cloudBlocks, captureAlbumPhoto, overlapsBox, ANIMALS, makeAnimal } = __mod_moteur;
+const { THREE, newScene, followSun, boxGeo, mat, save, persist, camera, renderer, createPlayer, stepPlayer, syncAvatar, followCamera, cam, input, sfx, speak, toast, ui, resetInput, cloudBlocks, captureAlbumPhoto, overlapsBox, celebrate, ANIMALS, makeAnimal } = __mod_moteur;
 
 const BUILD_COLORS = [
   0xef4444, 0xf97316, 0xfacc15, 0x84cc16, 0x22c55e, 0x14b8a6,
   0x3b82f6, 0x8b5cf6, 0xec4899, 0xffffff, 0x9ca3af, 0x1f2937,
   0x92400e, 0xfde68a, 'glass',
-  'bounce', 'light', 'water', 'leaves', 'gold', 'flower', 'door', 'confetti', 'roof'
+  'bounce', 'light', 'water', 'leaves', 'gold', 'flower', 'door', 'confetti', 'roof',
+  'bed', 'cake', 'painting', 'finish'
 ];
 
 const SPECIAL_META = {
@@ -6757,7 +7069,11 @@ const SPECIAL_META = {
   flower: { icon: '🌸', label: 'Fleur' },
   door: { icon: '🚪', label: 'Porte' },
   confetti: { icon: '🎉', label: 'Fête' },
-  roof: { icon: '🔺', label: 'Toit' }
+  roof: { icon: '🔺', label: 'Toit' },
+  bed: { icon: '🛏️', label: 'Lit' },
+  cake: { icon: '🎂', label: 'Gâteau' },
+  painting: { icon: '🖼️', label: 'Tableau' },
+  finish: { icon: '🏁', label: 'Arrivée' }
 };
 
 const IDX_GLASS = 14;
@@ -6770,6 +7086,10 @@ const IDX_FLOWER = 20;
 const IDX_DOOR = 21;
 const IDX_CONFETTI = 22;
 const IDX_ROOF = 23;
+const IDX_BED = 24;
+const IDX_CAKE = 25;
+const IDX_PAINTING = 26;
+const IDX_FINISH = 27;
 
 const AREA = 12;   // de -12 à 11
 const MAXY = 24;
@@ -6836,10 +7156,46 @@ function startConstruction({ onExit, hud }) {
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.48 });
   const waterMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 });
 
-  // Blocs instanciés (pour les formes simples) et groupes interactifs (Fleurs, Portes)
+  // Texture dynamique pour le bloc Tableau 🖼️ (charge le dernier dessin de Mon Album)
+  const paintingCanvas = document.createElement('canvas');
+  paintingCanvas.width = 128;
+  paintingCanvas.height = 128;
+  const pCtx = paintingCanvas.getContext('2d');
+  const paintingTex = new THREE.CanvasTexture(paintingCanvas);
+  paintingTex.colorSpace = THREE.SRGBColorSpace;
+  const paintingArtMat = new THREE.MeshBasicMaterial({ map: paintingTex });
+
+  function refreshAlbumPaintingTexture() {
+    pCtx.fillStyle = '#fef3c7';
+    pCtx.fillRect(0, 0, 128, 128);
+    pCtx.fillStyle = '#ec4899';
+    pCtx.font = 'bold 48px sans-serif';
+    pCtx.textAlign = 'center';
+    pCtx.textBaseline = 'middle';
+    pCtx.fillText('🦖⭐', 64, 64);
+    paintingTex.needsUpdate = true;
+    try {
+      const list = JSON.parse(localStorage.getItem('dino_magique_gallery_v1') || '[]');
+      if (Array.isArray(list) && list.length > 0 && list[0].dataUrl) {
+        const img = new Image();
+        img.onload = () => {
+          pCtx.fillStyle = '#ffffff';
+          pCtx.fillRect(0, 0, 128, 128);
+          pCtx.drawImage(img, 0, 0, 128, 128);
+          paintingTex.needsUpdate = true;
+        };
+        img.src = list[0].dataUrl;
+      }
+    } catch (_) {}
+  }
+  refreshAlbumPaintingTexture();
+
+  const CUSTOM_INDICES = new Set([IDX_FLOWER, IDX_DOOR, IDX_BED, IDX_CAKE, IDX_PAINTING, IDX_FINISH]);
+
+  // Blocs instanciés (pour les formes simples) et groupes interactifs
   const cells = new Map(); // "x,y,z" -> indice dans BUILD_COLORS
   const meshes = BUILD_COLORS.map((c, idx) => {
-    if (c === 'flower' || c === 'door') return null;
+    if (CUSTOM_INDICES.has(idx)) return null;
     let geo = cubeGeo;
     let material;
     if (c === 'glass') material = glassMat;
@@ -6893,6 +7249,50 @@ function startConstruction({ onExit, hud }) {
       return { group: g, type: 'flower' };
     }
 
+    if (ci === IDX_BED) {
+      const base = tag(new THREE.Mesh(boxGeo(0.96, 0.32, 0.96), mat(0x92400e)));
+      base.position.set(0.5, 0.16, 0.5);
+      const sheet = tag(new THREE.Mesh(boxGeo(0.9, 0.18, 0.65), mat(0xef4444, { plain: true })));
+      sheet.position.set(0.5, 0.38, 0.62);
+      const pillow = tag(new THREE.Mesh(boxGeo(0.76, 0.16, 0.26), mat(0xffffff, { plain: true })));
+      pillow.position.set(0.5, 0.4, 0.2);
+      g.add(base, sheet, pillow);
+      return { group: g, type: 'bed' };
+    }
+
+    if (ci === IDX_CAKE) {
+      const plateM = tag(new THREE.Mesh(boxGeo(0.86, 0.12, 0.86), mat(0xfef3c7, { plain: true })));
+      plateM.position.set(0.5, 0.06, 0.5);
+      const sponge = tag(new THREE.Mesh(boxGeo(0.7, 0.36, 0.7), mat(0xf472b6, { plain: true })));
+      sponge.position.set(0.5, 0.3, 0.5);
+      const icing = tag(new THREE.Mesh(boxGeo(0.74, 0.12, 0.74), mat(0xffffff, { plain: true })));
+      icing.position.set(0.5, 0.52, 0.5);
+      const candle = tag(new THREE.Mesh(boxGeo(0.1, 0.26, 0.1), mat(0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 1.0, plain: true })));
+      candle.position.set(0.5, 0.7, 0.5);
+      g.add(plateM, sponge, icing, candle);
+      return { group: g, type: 'cake' };
+    }
+
+    if (ci === IDX_PAINTING) {
+      const frame = tag(new THREE.Mesh(boxGeo(0.96, 0.96, 0.16), mat(0xb45309)));
+      frame.position.set(0.5, 0.5, 0.5);
+      const artF = tag(new THREE.Mesh(boxGeo(0.8, 0.8, 0.2), paintingArtMat));
+      artF.position.set(0.5, 0.5, 0.5);
+      g.add(frame, artF);
+      return { group: g, type: 'painting' };
+    }
+
+    if (ci === IDX_FINISH) {
+      const pad = tag(new THREE.Mesh(boxGeo(0.98, 0.2, 0.98), mat(0xfacc15, { emissive: 0xca8a04, emissiveIntensity: 0.45 })));
+      pad.position.set(0.5, 0.1, 0.5);
+      const pole = tag(new THREE.Mesh(boxGeo(0.12, 1.8, 0.12), mat(0xffffff, { plain: true })));
+      pole.position.set(0.5, 1.0, 0.5);
+      const flag = tag(new THREE.Mesh(boxGeo(0.6, 0.42, 0.08), mat(0x22c55e, { plain: true })));
+      flag.position.set(0.76, 1.65, 0.5);
+      g.add(pad, pole, flag);
+      return { group: g, type: 'finish' };
+    }
+
     // Porte automatique sur charnière
     const postL = tag(new THREE.Mesh(boxGeo(0.12, 1, 0.24), mat(0x78350f)));
     postL.position.set(0.06, 0.5, 0.5);
@@ -6931,7 +7331,7 @@ function startConstruction({ onExit, hud }) {
       if (ci < 0 || ci >= BUILD_COLORS.length) return;
       const [x, y, z] = key.split(',').map(Number);
       if (ci === IDX_LIGHT) lampPositions.push(new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
-      if (ci === IDX_FLOWER || ci === IDX_DOOR) {
+      if (CUSTOM_INDICES.has(ci)) {
         const sp = makeSpecialBlock(key, ci);
         if (sp.type === 'door' && prevOpen.has(key)) {
           sp.open = true;
@@ -7597,6 +7997,10 @@ function startConstruction({ onExit, hud }) {
             }
             if (ci === IDX_BOUNCE) {
               out.push({ x0: x, x1: x + 1, y0: y, y1: y + 0.56, z0: z, z1: z + 1, kind: 'bounce' });
+            } else if (ci === IDX_BED) {
+              out.push({ x0: x, x1: x + 1, y0: y, y1: y + 0.48, z0: z, z1: z + 1, kind: 'bed', key: k });
+            } else if (ci === IDX_FINISH) {
+              out.push({ x0: x, x1: x + 1, y0: y, y1: y + 0.25, z0: z, z1: z + 1, kind: 'finish', key: k });
             } else {
               out.push({
                 x0: x, x1: x + 1, y0: y, y1: y + 1, z0: z, z1: z + 1,
@@ -7757,13 +8161,37 @@ function startConstruction({ onExit, hud }) {
       if (!ui.busy) stepPlayer(P, world, dt);
       if (P.pos.y < -5) spawn();
 
-      // Bloc Fête 🎉
-      if (P.onGround && P.ground && P.ground.kind === 'confetti') {
+      // Bloc Fête 🎉, Lit 🛏️ (bascule Jour/Nuit) & Drapeau d'Arrivée 🏁
+      if (P.onGround && P.ground) {
         const now = performance.now();
-        const prev = confettiCooldown.get(P.ground.key) || 0;
-        if (now - prev > 1600) {
-          confettiCooldown.set(P.ground.key, now);
-          burstConfetti(P.pos.x, P.pos.y + 0.5, P.pos.z);
+        if (P.ground.kind === 'confetti') {
+          const prev = confettiCooldown.get(P.ground.key) || 0;
+          if (now - prev > 1600) {
+            confettiCooldown.set(P.ground.key, now);
+            burstConfetti(P.pos.x, P.pos.y + 0.5, P.pos.z);
+          }
+        } else if (P.ground.kind === 'bed') {
+          const prev = confettiCooldown.get('bed_sleep') || 0;
+          if (now - prev > 3000) {
+            confettiCooldown.set('bed_sleep', now);
+            applyDayNight(!state.night);
+            store();
+            sfx('light');
+            toast(state.night ? '😴 Bonne nuit sous les étoiles !' : '☀️ Bonjour ! Une nouvelle journée commence !');
+          }
+        } else if (P.ground.kind === 'finish') {
+          const prev = confettiCooldown.get('finish_win') || 0;
+          if (now - prev > 4000) {
+            confettiCooldown.set('finish_win', now);
+            burstConfetti(P.pos.x, P.pos.y + 0.6, P.pos.z);
+            speak('Bravo ! Tu as réussi ton parcours !');
+            celebrate({
+              title: '🏁 Bravo !',
+              text: 'Tu as réussi ton propre parcours de blocs !',
+              stars: 3,
+              buttons: [['🚶 Continuer', () => { spawn(); }, 'primary'], ['🔨 Modifier', () => { setWalking(false); }]]
+            });
+          }
         }
       }
 

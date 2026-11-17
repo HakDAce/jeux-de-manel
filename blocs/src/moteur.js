@@ -277,6 +277,8 @@ export function sfx(name) {
     case 'splash': tone(440, 0.14, 'sine', 0.11, 0, 260); break;
     case 'confetti': [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'triangle', 0.14, i * 0.05)); break;
     case 'light': tone(740, 0.15, 'sine', 0.14, 0, 220); break;
+    case 'eat': [587, 740, 880].forEach((f, i) => tone(f, 0.12, 'sine', 0.15, i * 0.07)); break;
+    case 'teleport': [440, 554, 659, 880, 1175].forEach((f, i) => tone(f, 0.14, 'sine', 0.14, i * 0.05)); break;
     default: break;
   }
 }
@@ -478,8 +480,11 @@ export const HATS = [
   { id: 'cap', label: 'Casquette', cost: 0 },
   { id: 'hair', label: 'Couettes', cost: 0 },
   { id: 'cat', label: 'Oreilles de chat', cost: 10 },
+  { id: 'glasses', label: 'Lunettes étoiles', cost: 15 },
   { id: 'crown', label: 'Couronne', cost: 25 },
+  { id: 'cape', label: 'Cape magique', cost: 35 },
   { id: 'dino', label: 'Crête de dino', cost: 40 },
+  { id: 'wings', label: 'Ailes de fée', cost: 50 },
   { id: 'unicorn', label: 'Corne de licorne', cost: 60 }
 ];
 export const SHIRTS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#ec4899', '#a855f7', '#14b8a6', '#ffffff', '#1f2937'];
@@ -570,6 +575,32 @@ export function makeAvatar(o = save.outfit) {
       head.add(horn);
       add(0.12, 0.14, 0.1, '#f9a8d4', -0.2, 0.36, 0);
       add(0.12, 0.14, 0.1, '#c4b5fd', 0.2, 0.36, 0);
+      break;
+    }
+    case 'glasses': {
+      add(0.54, 0.06, 0.06, '#facc15', 0, 0.05, 0.26);
+      add(0.18, 0.16, 0.06, '#ec4899', -0.14, 0.05, 0.27);
+      add(0.18, 0.16, 0.06, '#ec4899', 0.14, 0.05, 0.27);
+      break;
+    }
+    case 'cape': {
+      const cape = part(0.62, 0.85, 0.06, lam('#ef4444'));
+      cape.position.set(0, 0.98, -0.22);
+      cape.rotation.x = 0.18;
+      root.add(cape);
+      add(0.46, 0.1, 0.46, '#facc15', 0, 0.36, 0);
+      break;
+    }
+    case 'wings': {
+      const wMat = new THREE.MeshLambertMaterial({ color: 0xf9a8d4, emissive: 0xec4899, emissiveIntensity: 0.3, transparent: true, opacity: 0.82 });
+      const wL = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.05), wMat);
+      wL.position.set(-0.34, 1.15, -0.22);
+      wL.rotation.y = 0.35;
+      const wR = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.05), wMat);
+      wR.position.set(0.34, 1.15, -0.22);
+      wR.rotation.y = -0.35;
+      root.add(wL, wR);
+      add(0.42, 0.1, 0.42, '#fde047', 0, 0.36, 0);
       break;
     }
     default: break;
@@ -892,7 +923,8 @@ export function stepPlayer(P, world, dt) {
 }
 
 function substep(P, world, h) {
-  P.vel.y = Math.max(-28, P.vel.y - 26 * h);
+  const grav = P.gravity || 26;
+  P.vel.y = Math.max(-28, P.vel.y - grav * h);
   const p = P.pos;
   const boxes = world.boxesNear(p.x - 2, p.y - 2, p.z - 2, p.x + 2, p.y + HGT + 2, p.z + 2);
   const wasGround = P.onGround;

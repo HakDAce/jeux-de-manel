@@ -4,14 +4,15 @@
 import {
   THREE, newScene, followSun, boxGeo, mat, save, persist, camera, renderer,
   createPlayer, stepPlayer, syncAvatar, followCamera, cam, input, sfx, speak,
-  toast, ui, resetInput, cloudBlocks, captureAlbumPhoto, overlapsBox, ANIMALS, makeAnimal
+  toast, ui, resetInput, cloudBlocks, captureAlbumPhoto, overlapsBox, celebrate, ANIMALS, makeAnimal
 } from './moteur.js';
 
 export const BUILD_COLORS = [
   0xef4444, 0xf97316, 0xfacc15, 0x84cc16, 0x22c55e, 0x14b8a6,
   0x3b82f6, 0x8b5cf6, 0xec4899, 0xffffff, 0x9ca3af, 0x1f2937,
   0x92400e, 0xfde68a, 'glass',
-  'bounce', 'light', 'water', 'leaves', 'gold', 'flower', 'door', 'confetti', 'roof'
+  'bounce', 'light', 'water', 'leaves', 'gold', 'flower', 'door', 'confetti', 'roof',
+  'bed', 'cake', 'painting', 'finish'
 ];
 
 const SPECIAL_META = {
@@ -24,7 +25,11 @@ const SPECIAL_META = {
   flower: { icon: '🌸', label: 'Fleur' },
   door: { icon: '🚪', label: 'Porte' },
   confetti: { icon: '🎉', label: 'Fête' },
-  roof: { icon: '🔺', label: 'Toit' }
+  roof: { icon: '🔺', label: 'Toit' },
+  bed: { icon: '🛏️', label: 'Lit' },
+  cake: { icon: '🎂', label: 'Gâteau' },
+  painting: { icon: '🖼️', label: 'Tableau' },
+  finish: { icon: '🏁', label: 'Arrivée' }
 };
 
 const IDX_GLASS = 14;
@@ -37,6 +42,10 @@ const IDX_FLOWER = 20;
 const IDX_DOOR = 21;
 const IDX_CONFETTI = 22;
 const IDX_ROOF = 23;
+const IDX_BED = 24;
+const IDX_CAKE = 25;
+const IDX_PAINTING = 26;
+const IDX_FINISH = 27;
 
 const AREA = 12;   // de -12 à 11
 const MAXY = 24;
@@ -103,10 +112,46 @@ export function startConstruction({ onExit, hud }) {
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.48 });
   const waterMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 });
 
-  // Blocs instanciés (pour les formes simples) et groupes interactifs (Fleurs, Portes)
+  // Texture dynamique pour le bloc Tableau 🖼️ (charge le dernier dessin de Mon Album)
+  const paintingCanvas = document.createElement('canvas');
+  paintingCanvas.width = 128;
+  paintingCanvas.height = 128;
+  const pCtx = paintingCanvas.getContext('2d');
+  const paintingTex = new THREE.CanvasTexture(paintingCanvas);
+  paintingTex.colorSpace = THREE.SRGBColorSpace;
+  const paintingArtMat = new THREE.MeshBasicMaterial({ map: paintingTex });
+
+  function refreshAlbumPaintingTexture() {
+    pCtx.fillStyle = '#fef3c7';
+    pCtx.fillRect(0, 0, 128, 128);
+    pCtx.fillStyle = '#ec4899';
+    pCtx.font = 'bold 48px sans-serif';
+    pCtx.textAlign = 'center';
+    pCtx.textBaseline = 'middle';
+    pCtx.fillText('🦖⭐', 64, 64);
+    paintingTex.needsUpdate = true;
+    try {
+      const list = JSON.parse(localStorage.getItem('dino_magique_gallery_v1') || '[]');
+      if (Array.isArray(list) && list.length > 0 && list[0].dataUrl) {
+        const img = new Image();
+        img.onload = () => {
+          pCtx.fillStyle = '#ffffff';
+          pCtx.fillRect(0, 0, 128, 128);
+          pCtx.drawImage(img, 0, 0, 128, 128);
+          paintingTex.needsUpdate = true;
+        };
+        img.src = list[0].dataUrl;
+      }
+    } catch (_) {}
+  }
+  refreshAlbumPaintingTexture();
+
+  const CUSTOM_INDICES = new Set([IDX_FLOWER, IDX_DOOR, IDX_BED, IDX_CAKE, IDX_PAINTING, IDX_FINISH]);
+
+  // Blocs instanciés (pour les formes simples) et groupes interactifs
   const cells = new Map(); // "x,y,z" -> indice dans BUILD_COLORS
   const meshes = BUILD_COLORS.map((c, idx) => {
-    if (c === 'flower' || c === 'door') return null;
+    if (CUSTOM_INDICES.has(idx)) return null;
     let geo = cubeGeo;
     let material;
     if (c === 'glass') material = glassMat;
@@ -160,6 +205,50 @@ export function startConstruction({ onExit, hud }) {
       return { group: g, type: 'flower' };
     }
 
+    if (ci === IDX_BED) {
+      const base = tag(new THREE.Mesh(boxGeo(0.96, 0.32, 0.96), mat(0x92400e)));
+      base.position.set(0.5, 0.16, 0.5);
+      const sheet = tag(new THREE.Mesh(boxGeo(0.9, 0.18, 0.65), mat(0xef4444, { plain: true })));
+      sheet.position.set(0.5, 0.38, 0.62);
+      const pillow = tag(new THREE.Mesh(boxGeo(0.76, 0.16, 0.26), mat(0xffffff, { plain: true })));
+      pillow.position.set(0.5, 0.4, 0.2);
+      g.add(base, sheet, pillow);
+      return { group: g, type: 'bed' };
+    }
+
+    if (ci === IDX_CAKE) {
+      const plateM = tag(new THREE.Mesh(boxGeo(0.86, 0.12, 0.86), mat(0xfef3c7, { plain: true })));
+      plateM.position.set(0.5, 0.06, 0.5);
+      const sponge = tag(new THREE.Mesh(boxGeo(0.7, 0.36, 0.7), mat(0xf472b6, { plain: true })));
+      sponge.position.set(0.5, 0.3, 0.5);
+      const icing = tag(new THREE.Mesh(boxGeo(0.74, 0.12, 0.74), mat(0xffffff, { plain: true })));
+      icing.position.set(0.5, 0.52, 0.5);
+      const candle = tag(new THREE.Mesh(boxGeo(0.1, 0.26, 0.1), mat(0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 1.0, plain: true })));
+      candle.position.set(0.5, 0.7, 0.5);
+      g.add(plateM, sponge, icing, candle);
+      return { group: g, type: 'cake' };
+    }
+
+    if (ci === IDX_PAINTING) {
+      const frame = tag(new THREE.Mesh(boxGeo(0.96, 0.96, 0.16), mat(0xb45309)));
+      frame.position.set(0.5, 0.5, 0.5);
+      const artF = tag(new THREE.Mesh(boxGeo(0.8, 0.8, 0.2), paintingArtMat));
+      artF.position.set(0.5, 0.5, 0.5);
+      g.add(frame, artF);
+      return { group: g, type: 'painting' };
+    }
+
+    if (ci === IDX_FINISH) {
+      const pad = tag(new THREE.Mesh(boxGeo(0.98, 0.2, 0.98), mat(0xfacc15, { emissive: 0xca8a04, emissiveIntensity: 0.45 })));
+      pad.position.set(0.5, 0.1, 0.5);
+      const pole = tag(new THREE.Mesh(boxGeo(0.12, 1.8, 0.12), mat(0xffffff, { plain: true })));
+      pole.position.set(0.5, 1.0, 0.5);
+      const flag = tag(new THREE.Mesh(boxGeo(0.6, 0.42, 0.08), mat(0x22c55e, { plain: true })));
+      flag.position.set(0.76, 1.65, 0.5);
+      g.add(pad, pole, flag);
+      return { group: g, type: 'finish' };
+    }
+
     // Porte automatique sur charnière
     const postL = tag(new THREE.Mesh(boxGeo(0.12, 1, 0.24), mat(0x78350f)));
     postL.position.set(0.06, 0.5, 0.5);
@@ -198,7 +287,7 @@ export function startConstruction({ onExit, hud }) {
       if (ci < 0 || ci >= BUILD_COLORS.length) return;
       const [x, y, z] = key.split(',').map(Number);
       if (ci === IDX_LIGHT) lampPositions.push(new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
-      if (ci === IDX_FLOWER || ci === IDX_DOOR) {
+      if (CUSTOM_INDICES.has(ci)) {
         const sp = makeSpecialBlock(key, ci);
         if (sp.type === 'door' && prevOpen.has(key)) {
           sp.open = true;
@@ -864,6 +953,10 @@ export function startConstruction({ onExit, hud }) {
             }
             if (ci === IDX_BOUNCE) {
               out.push({ x0: x, x1: x + 1, y0: y, y1: y + 0.56, z0: z, z1: z + 1, kind: 'bounce' });
+            } else if (ci === IDX_BED) {
+              out.push({ x0: x, x1: x + 1, y0: y, y1: y + 0.48, z0: z, z1: z + 1, kind: 'bed', key: k });
+            } else if (ci === IDX_FINISH) {
+              out.push({ x0: x, x1: x + 1, y0: y, y1: y + 0.25, z0: z, z1: z + 1, kind: 'finish', key: k });
             } else {
               out.push({
                 x0: x, x1: x + 1, y0: y, y1: y + 1, z0: z, z1: z + 1,
@@ -1024,13 +1117,37 @@ export function startConstruction({ onExit, hud }) {
       if (!ui.busy) stepPlayer(P, world, dt);
       if (P.pos.y < -5) spawn();
 
-      // Bloc Fête 🎉
-      if (P.onGround && P.ground && P.ground.kind === 'confetti') {
+      // Bloc Fête 🎉, Lit 🛏️ (bascule Jour/Nuit) & Drapeau d'Arrivée 🏁
+      if (P.onGround && P.ground) {
         const now = performance.now();
-        const prev = confettiCooldown.get(P.ground.key) || 0;
-        if (now - prev > 1600) {
-          confettiCooldown.set(P.ground.key, now);
-          burstConfetti(P.pos.x, P.pos.y + 0.5, P.pos.z);
+        if (P.ground.kind === 'confetti') {
+          const prev = confettiCooldown.get(P.ground.key) || 0;
+          if (now - prev > 1600) {
+            confettiCooldown.set(P.ground.key, now);
+            burstConfetti(P.pos.x, P.pos.y + 0.5, P.pos.z);
+          }
+        } else if (P.ground.kind === 'bed') {
+          const prev = confettiCooldown.get('bed_sleep') || 0;
+          if (now - prev > 3000) {
+            confettiCooldown.set('bed_sleep', now);
+            applyDayNight(!state.night);
+            store();
+            sfx('light');
+            toast(state.night ? '😴 Bonne nuit sous les étoiles !' : '☀️ Bonjour ! Une nouvelle journée commence !');
+          }
+        } else if (P.ground.kind === 'finish') {
+          const prev = confettiCooldown.get('finish_win') || 0;
+          if (now - prev > 4000) {
+            confettiCooldown.set('finish_win', now);
+            burstConfetti(P.pos.x, P.pos.y + 0.6, P.pos.z);
+            speak('Bravo ! Tu as réussi ton parcours !');
+            celebrate({
+              title: '🏁 Bravo !',
+              text: 'Tu as réussi ton propre parcours de blocs !',
+              stars: 3,
+              buttons: [['🚶 Continuer', () => { spawn(); }, 'primary'], ['🔨 Modifier', () => { setWalking(false); }]]
+            });
+          }
         }
       }
 
