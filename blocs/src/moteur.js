@@ -44,6 +44,7 @@ export function newScene(sky = 0x8fd3ff, fogFar = 140) {
   scene.add(sun);
   scene.add(sun.target);
   scene.userData.sun = sun;
+  scene.userData.hemi = hemi;
   return scene;
 }
 
@@ -83,12 +84,13 @@ const STUD = makeStudTexture();
 
 const matCache = new Map();
 export function mat(color, opts = {}) {
-  const key = `${color}|${opts.emissive || ''}|${opts.opacity || ''}|${opts.plain ? 1 : 0}`;
+  const key = `${color}|${opts.emissive || ''}|${opts.emissiveIntensity || ''}|${opts.opacity || ''}|${opts.plain ? 1 : 0}`;
   if (!matCache.has(key)) {
     const m = new THREE.MeshLambertMaterial({
       color,
       map: opts.plain ? null : STUD,
       emissive: opts.emissive || 0x000000,
+      emissiveIntensity: opts.emissiveIntensity !== undefined ? opts.emissiveIntensity : 1,
       transparent: !!opts.opacity,
       opacity: opts.opacity || 1
     });
@@ -150,9 +152,11 @@ export function cloudBlocks(x, y, z, s = 1) {
 }
 
 // ---------------------------------------------------------------------------
-// Sauvegarde
+// Sauvegarde (avec 3 emplacements de construction compatibles avec l'ancien format)
 // ---------------------------------------------------------------------------
 const SAVE_KEY = 'manel_monde_blocs_v1';
+const GALLERY_KEY = 'dino_magique_gallery_v1';
+
 export const save = (() => {
   let data = {};
   try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (_) {}
@@ -162,15 +166,67 @@ export const save = (() => {
   data.chests = data.chests || [];
   data.outfit = Object.assign({ shirt: '#3b82f6', pants: '#1e3a8a', skin: '#f5c9a0', hair: '#3f2a1d', hat: 'none' }, data.outfit || {});
   data.build = data.build || null;
+  if (!Array.isArray(data.builds)) {
+    data.builds = [
+      data.build ? { name: 'Monde 1', blocks: data.build, night: false } : null,
+      null,
+      null
+    ];
+  }
+  while (data.builds.length < 3) data.builds.push(null);
+  data.activeSlot = Number.isInteger(data.activeSlot) ? Math.max(0, Math.min(2, data.activeSlot)) : 0;
   return data;
 })();
+
 export function persist() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (_) {}
 }
+
 export function totalStars() {
   let n = save.gems.length + save.chests.length * 3;
   Object.values(save.levels).forEach((l) => { n += (l.coins || 0) + (l.done ? 3 : 0); });
   return n;
+}
+
+// Capture une photo de la scène 3D et l'ajoute directement à "Mon Album" de l'Atelier
+export function captureAlbumPhoto(scene, title = 'Construction 3D') {
+  try {
+    renderer.render(scene, camera);
+    const snap = document.createElement('canvas');
+    snap.width = 900;
+    snap.height = 600;
+    const g = snap.getContext('2d');
+    g.fillStyle = '#9fdcff';
+    g.fillRect(0, 0, snap.width, snap.height);
+    const src = renderer.domElement;
+    const scale = Math.max(snap.width / src.width, snap.height / src.height);
+    const dw = src.width * scale;
+    const dh = src.height * scale;
+    g.drawImage(src, (snap.width - dw) / 2, (snap.height - dh) / 2, dw, dh);
+    const dataUrl = snap.toDataURL('image/png');
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(GALLERY_KEY) || '[]'); } catch (_) {}
+    if (!Array.isArray(list)) list = [];
+    list.unshift({
+      id: Date.now(),
+      title,
+      date: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      dataUrl
+    });
+    localStorage.setItem(GALLERY_KEY, JSON.stringify(list.slice(0, 20)));
+    const flashEl = document.getElementById('flash');
+    if (flashEl) {
+      flashEl.style.opacity = '0.7';
+      setTimeout(() => { flashEl.style.opacity = '0'; }, 180);
+    }
+    sfx('camera');
+    speak('Photo gardée dans ton album !');
+    toast('📸 Photo gardée dans Mon Album !');
+    return true;
+  } catch (_) {
+    toast('Impossible de prendre la photo !');
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -178,7 +234,9 @@ export function totalStars() {
 // ---------------------------------------------------------------------------
 let actx = null;
 export let soundOn = true;
+export function isSoundOn() { return soundOn; }
 export function setSound(on) { soundOn = on; }
+
 function tone(freq, dur, type = 'sine', vol = 0.18, delay = 0, slide = 0) {
   if (!soundOn) return;
   try {
@@ -197,6 +255,7 @@ function tone(freq, dur, type = 'sine', vol = 0.18, delay = 0, slide = 0) {
     o.stop(t + dur + 0.02);
   } catch (_) {}
 }
+
 export function sfx(name) {
   switch (name) {
     case 'jump': tone(380, 0.16, 'square', 0.07, 0, 300); break;
@@ -211,9 +270,15 @@ export function sfx(name) {
     case 'remove': tone(180, 0.1, 'triangle', 0.12, 0, -90); break;
     case 'pop': tone(660, 0.07, 'sine', 0.12); break;
     case 'friend': [659, 784, 659, 988].forEach((f, i) => tone(f, 0.13, 'sine', 0.15, i * 0.1)); break;
+    case 'camera': tone(1200, 0.06, 'square', 0.09); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.14, 'sine', 0.13, 0.07 + i * 0.05)); break;
+    case 'door': tone(260, 0.12, 'triangle', 0.14, 0, 140); break;
+    case 'splash': tone(440, 0.14, 'sine', 0.11, 0, 260); break;
+    case 'confetti': [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'triangle', 0.14, i * 0.05)); break;
+    case 'light': tone(740, 0.15, 'sine', 0.14, 0, 220); break;
     default: break;
   }
 }
+
 export function speak(text) {
   if (!soundOn || !window.speechSynthesis) return;
   try {
@@ -319,6 +384,41 @@ export function celebrate({ title, text, stars = 3, buttons }) {
 }
 
 // ---------------------------------------------------------------------------
+// Animaux amis (partagés entre Petit monde et Construction)
+// ---------------------------------------------------------------------------
+export const ANIMALS = [
+  { id: 'cochon', name: 'Le cochon', body: 0xf9a8d4, head: 0xf9a8d4, snout: 0xf472b6, size: 1 },
+  { id: 'mouton', name: 'Le mouton', body: 0xf8fafc, head: 0x374151, snout: 0x374151, size: 1.05 },
+  { id: 'poule', name: 'La poule', body: 0xffffff, head: 0xffffff, snout: 0xf59e0b, size: 0.6, crest: 0xef4444 },
+  { id: 'chien', name: 'Le chien', body: 0xb45309, head: 0xb45309, snout: 0x78350f, size: 0.85, ears: 0x78350f },
+  { id: 'lapin', name: 'Le lapin', body: 0xe5e7eb, head: 0xe5e7eb, snout: 0xf9a8d4, size: 0.6, bunny: true }
+];
+
+export function makeAnimal(a) {
+  const g = new THREE.Group();
+  const s = a.size;
+  const lam = (c) => mat(c, { plain: true });
+  const add = (w, h, d, c, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w * s, h * s, d * s), lam(c));
+    m.position.set(x * s, y * s, z * s);
+    m.castShadow = true;
+    g.add(m);
+    return m;
+  };
+  add(0.9, 0.7, 1.3, a.body, 0, 0.75, 0);
+  const legs = [[-0.3, 0.45], [0.3, 0.45], [-0.3, -0.45], [0.3, -0.45]].map(([x, z]) => add(0.22, 0.42, 0.22, a.head === 0xffffff ? 0xf59e0b : a.head, x, 0.21, z));
+  add(0.7, 0.65, 0.6, a.head, 0, 1.15, 0.8);
+  add(0.4, 0.26, 0.16, a.snout, 0, 1.02, 1.14);
+  add(0.12, 0.12, 0.05, 0x111827, -0.18, 1.28, 1.11);
+  add(0.12, 0.12, 0.05, 0x111827, 0.18, 1.28, 1.11);
+  if (a.crest) add(0.12, 0.3, 0.4, a.crest, 0, 1.55, 0.8);
+  if (a.ears) { add(0.14, 0.4, 0.2, a.ears, -0.38, 1.2, 0.8); add(0.14, 0.4, 0.2, a.ears, 0.38, 1.2, 0.8); }
+  if (a.bunny) { add(0.14, 0.6, 0.12, a.head, -0.16, 1.7, 0.75); add(0.14, 0.6, 0.12, a.head, 0.16, 1.7, 0.75); }
+  g.userData.legs = legs;
+  return g;
+}
+
+// ---------------------------------------------------------------------------
 // Personnage en blocs
 // ---------------------------------------------------------------------------
 function faceTexture(skin) {
@@ -399,7 +499,6 @@ export function makeAvatar(o = save.outfit) {
   head.position.y = 1.72;
   root.add(head);
 
-  // Cheveux de base
   const hair = lam(o.hair);
   const top = part(0.54, 0.14, 0.54, hair);
   top.position.y = 0.27;
@@ -408,7 +507,6 @@ export function makeAvatar(o = save.outfit) {
   back.position.set(0, 0.06, -0.24);
   head.add(back);
 
-  // Accessoire
   const add = (w, h, d, c, x, y, z, rz = 0) => {
     const m = part(w, h, d, lam(c));
     m.position.set(x, y, z);
@@ -475,7 +573,7 @@ export function animateAvatar(av, speed, dt, inAir) {
 }
 
 // ---------------------------------------------------------------------------
-// Commandes : joystick (moitié gauche), caméra (moitié droite), saut
+// Commandes : joystick (moitié gauche), caméra / construction (orbite)
 // ---------------------------------------------------------------------------
 export const input = {
   mx: 0, mz: 0,           // joystick (-1..1)
@@ -483,7 +581,12 @@ export const input = {
   scheme: 'play',         // 'play' | 'orbit'
   onTap: null,            // (clientX, clientY) en mode orbite
   onOrbit: null,          // (dx, dy) en mode orbite
-  onZoom: null            // (facteur)
+  onPan: null,            // (dx, dy) déplacement 2 doigts / clic droit
+  onZoom: null,           // (facteur)
+  onHover: null,          // (clientX, clientY) aperçu bloc fantôme
+  onDragStart: null,      // (clientX, clientY) -> true si mode tracer réclame le doigt
+  onDragMove: null,       // (clientX, clientY)
+  onDragEnd: null         // ()
 };
 export const cam = { yaw: 0, pitch: 0.42, dist: 8, target: new THREE.Vector3() };
 
@@ -495,6 +598,7 @@ const ptrs = new Map();
 let stickId = null;
 let stickOrigin = null;
 let pinchDist = 0;
+let pinchMid = null;
 
 function setStickVisual(x, y, kx, ky) {
   stickBase.style.left = `${x}px`;
@@ -516,24 +620,50 @@ function camPointers() {
   return [...ptrs.entries()].filter(([id]) => id !== stickId).map(([, p]) => p);
 }
 
+touchLayer.addEventListener('contextmenu', (e) => e.preventDefault());
+
 touchLayer.addEventListener('pointerdown', (e) => {
   if (ui.busy) return;
   e.preventDefault();
   try { touchLayer.setPointerCapture(e.pointerId); } catch (_) {}
-  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now() });
+  const rec = {
+    x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY,
+    t0: performance.now(), moved: false, hadPinch: false,
+    panning: e.button === 2 || e.shiftKey, draggingBuild: false
+  };
+  ptrs.set(e.pointerId, rec);
+
   if (input.scheme === 'play' && stickId === null && e.clientX < window.innerWidth * 0.45) {
     stickId = e.pointerId;
     stickOrigin = { x: e.clientX, y: e.clientY };
     stickBase.classList.add('active');
     setStickVisual(e.clientX, e.clientY, 0, 0);
+  } else if (input.scheme === 'orbit') {
+    if (input.onHover) input.onHover(e.clientX, e.clientY);
+    const cp = camPointers();
+    if (cp.length === 1 && !rec.panning && input.onDragStart) {
+      rec.draggingBuild = !!input.onDragStart(e.clientX, e.clientY);
+    }
   }
+
   const cp = camPointers();
-  if (cp.length === 2) pinchDist = Math.hypot(cp[0].x - cp[1].x, cp[0].y - cp[1].y);
+  if (cp.length >= 2) {
+    pinchDist = Math.hypot(cp[0].x - cp[1].x, cp[0].y - cp[1].y);
+    pinchMid = { x: (cp[0].x + cp[1].x) / 2, y: (cp[0].y + cp[1].y) / 2 };
+    cp.forEach((c) => {
+      c.hadPinch = true;
+      if (c.draggingBuild && input.onDragEnd) input.onDragEnd();
+      c.draggingBuild = false;
+    });
+  }
 });
 
 touchLayer.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId);
-  if (!p) return;
+  if (!p) {
+    if (input.scheme === 'orbit' && input.onHover && !ui.busy) input.onHover(e.clientX, e.clientY);
+    return;
+  }
   e.preventDefault();
   const dx = e.clientX - p.x;
   const dy = e.clientY - p.y;
@@ -550,21 +680,37 @@ touchLayer.addEventListener('pointermove', (e) => {
     setStickVisual(stickOrigin.x, stickOrigin.y, kx, ky);
     return;
   }
+
   const cp = camPointers();
   if (cp.length >= 2) {
     const d = Math.hypot(cp[0].x - cp[1].x, cp[0].y - cp[1].y);
+    const mx = (cp[0].x + cp[1].x) / 2;
+    const my = (cp[0].y + cp[1].y) / 2;
     if (pinchDist > 0) {
       const f = pinchDist / Math.max(20, d);
       if (input.scheme === 'orbit' && input.onZoom) input.onZoom(f);
       else cam.dist = THREE.MathUtils.clamp(cam.dist * f, 4, 16);
+      if (input.scheme === 'orbit' && input.onPan && pinchMid) input.onPan(mx - pinchMid.x, my - pinchMid.y);
     }
     pinchDist = d;
-    p.moved = true;
+    pinchMid = { x: mx, y: my };
+    cp.forEach((c) => { c.moved = true; c.hadPinch = true; });
     return;
   }
+
   if (Math.abs(e.clientX - p.x0) + Math.abs(e.clientY - p.y0) > 10) p.moved = true;
-  if (input.scheme === 'orbit' && input.onOrbit) input.onOrbit(dx, dy);
-  else {
+
+  if (input.scheme === 'orbit') {
+    if (p.draggingBuild && input.onDragMove) {
+      input.onDragMove(e.clientX, e.clientY);
+      return;
+    }
+    if (p.panning && input.onPan) {
+      input.onPan(dx, dy);
+      return;
+    }
+    if (input.onOrbit) input.onOrbit(dx, dy);
+  } else {
     cam.yaw -= dx * 0.008;
     cam.pitch = THREE.MathUtils.clamp(cam.pitch + dy * 0.005, 0.05, 1.25);
   }
@@ -574,8 +720,16 @@ function endPtr(e) {
   const p = ptrs.get(e.pointerId);
   ptrs.delete(e.pointerId);
   if (e.pointerId === stickId) resetStick();
-  if (camPointers().length < 2) pinchDist = 0;
-  if (p && !p.moved && input.scheme === 'orbit' && input.onTap && e.type === 'pointerup' && performance.now() - p.t0 < 600 && ptrs.size === 0) {
+  if (camPointers().length < 2) {
+    pinchDist = 0;
+    pinchMid = null;
+  }
+  if (!p) return;
+  if (p.draggingBuild) {
+    if (input.onDragEnd) input.onDragEnd();
+    return;
+  }
+  if (!p.moved && !p.hadPinch && !p.panning && input.scheme === 'orbit' && input.onTap && e.type === 'pointerup' && performance.now() - p.t0 < 1200) {
     input.onTap(e.clientX, e.clientY);
   }
 }
@@ -622,6 +776,8 @@ export function readKeyboard(dt) {
 export function resetInput() {
   ptrs.clear();
   resetStick();
+  pinchDist = 0;
+  pinchMid = null;
   input.jumpQueued = 0;
   keys.clear();
 }
@@ -660,7 +816,7 @@ export function rebuildAvatar(player, scene) {
   scene.add(player.avatar);
 }
 
-function overlaps(px, py, pz, b) {
+export function overlapsBox(px, py, pz, b) {
   return px - R < b.x1 - EPS && px + R > b.x0 + EPS &&
     py < b.y1 - EPS && py + HGT > b.y0 + EPS &&
     pz - R < b.z1 - EPS && pz + R > b.z0 + EPS;
@@ -668,10 +824,8 @@ function overlaps(px, py, pz, b) {
 
 // world.boxesNear(x0, y0, z0, x1, y1, z1) -> liste de boîtes solides
 export function stepPlayer(P, world, dt) {
-  // Direction voulue, relative à la caméra
   const fx = -Math.sin(cam.yaw);
   const fz = -Math.cos(cam.yaw);
-  // avant = (fx, fz), droite = (-fz, fx)
   const wx = fx * -input.mz + -fz * input.mx;
   const wz = fz * -input.mz + fx * input.mx;
   const mag = Math.min(1, Math.hypot(wx, wz));
@@ -687,7 +841,6 @@ export function stepPlayer(P, world, dt) {
     P.facing += d * Math.min(1, 12 * dt);
   }
 
-  // Saut
   input.jumpQueued = Math.max(0, input.jumpQueued - dt);
   P.coyote = P.onGround ? 0.12 : Math.max(0, P.coyote - dt);
   if (input.jumpQueued > 0 && P.coyote > 0) {
@@ -698,7 +851,6 @@ export function stepPlayer(P, world, dt) {
     sfx('jump');
   }
 
-  // Plateforme mobile : on suit son déplacement
   if (P.onGround && P.ground && P.ground.delta) {
     P.pos.x += P.ground.delta.x;
     P.pos.y += P.ground.delta.y;
@@ -716,15 +868,14 @@ function substep(P, world, h) {
   const boxes = world.boxesNear(p.x - 2, p.y - 2, p.z - 2, p.x + 2, p.y + HGT + 2, p.z + 2);
   const wasGround = P.onGround;
 
-  // Axe X puis Z (avec petite marche automatique)
   for (const axis of ['x', 'z']) {
     const v = P.vel[axis] * h;
     if (!v) continue;
     p[axis] += v;
     for (const b of boxes) {
-      if (!overlaps(p.x, p.y, p.z, b)) continue;
+      if (!overlapsBox(p.x, p.y, p.z, b)) continue;
       const up = b.y1 - p.y;
-      if (wasGround && up > 0 && up <= P.stepH && !boxes.some((o) => o !== b && overlaps(p.x, b.y1 + EPS, p.z, o))) {
+      if (wasGround && up > 0 && up <= P.stepH && !boxes.some((o) => o !== b && overlapsBox(p.x, b.y1 + EPS, p.z, o))) {
         p.y = b.y1 + EPS;
         continue;
       }
@@ -734,11 +885,10 @@ function substep(P, world, h) {
     }
   }
 
-  // Axe Y
   p.y += P.vel.y * h;
   P.onGround = false;
   for (const b of boxes) {
-    if (!overlaps(p.x, p.y, p.z, b)) continue;
+    if (!overlapsBox(p.x, p.y, p.z, b)) continue;
     if (P.vel.y <= 0) {
       p.y = b.y1;
       P.onGround = true;
@@ -755,9 +905,8 @@ function substep(P, world, h) {
     }
   }
   if (!P.onGround) {
-    // Toujours posé ? (petit test juste en dessous)
     for (const b of boxes) {
-      if (P.vel.y <= 0 && overlaps(p.x, p.y - 0.02, p.z, b) && b.y1 <= p.y + 0.021) {
+      if (P.vel.y <= 0 && overlapsBox(p.x, p.y - 0.02, p.z, b) && b.y1 <= p.y + 0.021) {
         P.onGround = true;
         P.ground = b;
         break;
@@ -773,8 +922,6 @@ export function syncAvatar(P, dt) {
   animateAvatar(P.avatar, Math.hypot(P.vel.x, P.vel.z), dt, !P.onGround);
 }
 
-// Caméra qui suit le joueur (vue à la 3e personne).
-// Si un mur ou une colline est entre la caméra et le joueur, la caméra se rapproche.
 let camDistNow = 8;
 export function followCamera(P, dt, snap = false, world = null) {
   const goal = new THREE.Vector3(P.pos.x, P.pos.y + 1.5, P.pos.z);
@@ -803,7 +950,6 @@ export function showPlayControls(on) {
   document.body.classList.toggle('playing', on);
 }
 
-// Petit objet qui tourne et flotte (pièce, gemme)
 export function spinBob(obj, t, base) {
   obj.rotation.y = t * 2.2;
   obj.position.y = base + Math.sin(t * 3 + obj.position.x) * 0.15;

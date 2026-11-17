@@ -1,6 +1,18 @@
 // Mode hors-ligne : réseau d'abord (pour avoir la dernière version), sinon copie gardée sur la tablette.
-const CACHE = 'atelier-magique-v1';
-const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'coloriages.js', 'characters-data.js', 'manifest.json'];
+const CACHE = 'atelier-magique-v2';
+const FILES = [
+  './',
+  'index.html',
+  'styles.css',
+  'app.js',
+  'coloriages.js',
+  'characters-data.js',
+  'manifest.json',
+  'blocs/',
+  'blocs/index.html',
+  'blocs/blocs.css',
+  'blocs/jeu.js'
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

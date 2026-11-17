@@ -4,7 +4,7 @@
 import {
   THREE, newScene, followSun, block, solidOf, mat, cloudBlocks, save, persist,
   createPlayer, stepPlayer, syncAvatar, followCamera, cam, input, sfx, speak,
-  toast, askQuestion, celebrate, spinBob, ui
+  toast, askQuestion, celebrate, spinBob, ui, ANIMALS, makeAnimal
 } from './moteur.js';
 
 const SIZE = 56;
@@ -38,38 +38,6 @@ function makeNoise(rand) {
     const b = at(xi, zi + 1) + (at(xi + 1, zi + 1) - at(xi, zi + 1)) * sx;
     return a + (b - a) * sz;
   };
-}
-
-const ANIMALS = [
-  { id: 'cochon', name: 'Le cochon', body: 0xf9a8d4, head: 0xf9a8d4, snout: 0xf472b6, size: 1 },
-  { id: 'mouton', name: 'Le mouton', body: 0xf8fafc, head: 0x374151, snout: 0x374151, size: 1.05 },
-  { id: 'poule', name: 'La poule', body: 0xffffff, head: 0xffffff, snout: 0xf59e0b, size: 0.6, crest: 0xef4444 },
-  { id: 'chien', name: 'Le chien', body: 0xb45309, head: 0xb45309, snout: 0x78350f, size: 0.85, ears: 0x78350f },
-  { id: 'lapin', name: 'Le lapin', body: 0xe5e7eb, head: 0xe5e7eb, snout: 0xf9a8d4, size: 0.6, bunny: true }
-];
-
-function makeAnimal(a) {
-  const g = new THREE.Group();
-  const s = a.size;
-  const lam = (c) => mat(c, { plain: true });
-  const add = (w, h, d, c, x, y, z) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w * s, h * s, d * s), lam(c));
-    m.position.set(x * s, y * s, z * s);
-    m.castShadow = true;
-    g.add(m);
-    return m;
-  };
-  add(0.9, 0.7, 1.3, a.body, 0, 0.75, 0);
-  const legs = [[-0.3, 0.45], [0.3, 0.45], [-0.3, -0.45], [0.3, -0.45]].map(([x, z]) => add(0.22, 0.42, 0.22, a.head === 0xffffff ? 0xf59e0b : a.head, x, 0.21, z));
-  add(0.7, 0.65, 0.6, a.head, 0, 1.15, 0.8);
-  add(0.4, 0.26, 0.16, a.snout, 0, 1.02, 1.14);
-  add(0.12, 0.12, 0.05, 0x111827, -0.18, 1.28, 1.11);
-  add(0.12, 0.12, 0.05, 0x111827, 0.18, 1.28, 1.11);
-  if (a.crest) add(0.12, 0.3, 0.4, a.crest, 0, 1.55, 0.8);
-  if (a.ears) { add(0.14, 0.4, 0.2, a.ears, -0.38, 1.2, 0.8); add(0.14, 0.4, 0.2, a.ears, 0.38, 1.2, 0.8); }
-  if (a.bunny) { add(0.14, 0.6, 0.12, a.head, -0.16, 1.7, 0.75); add(0.14, 0.6, 0.12, a.head, 0.16, 1.7, 0.75); }
-  g.userData.legs = legs;
-  return g;
 }
 
 function makeGem(color) {
@@ -110,11 +78,9 @@ export function startMonde({ onExit, hud, onStars }) {
       H[idx(x, z)] = Math.max(-1, Math.min(9, h));
     }
   }
-  // Clairière plate au centre (pour la maison et le départ)
   for (let z = -5; z <= 12; z++) {
     for (let x = -6; x <= 6; x++) H[idx(x, z)] = 2;
   }
-  // Pente douce autour de la clairière
   for (let z = -8; z <= 15; z++) {
     for (let x = -9; x <= 9; x++) {
       if (Math.abs(x) <= 6 && z >= -5 && z <= 12) continue;
@@ -208,7 +174,7 @@ export function startMonde({ onExit, hud, onStars }) {
     scene.add(block(c.x, c.h + 0.65, c.z, 0.32, 0.22, 0.32, col, { plain: true, shadow: false }));
   }
 
-  // Maison (murs + porte ouverte côté joueur)
+  // Maison
   const hx = 0;
   const hz = -1;
   const hy = 2;
@@ -231,7 +197,6 @@ export function startMonde({ onExit, hud, onStars }) {
   scene.add(block(hx - 1.5, hy + 1.8, hz + 2.52, 0.9, 0.9, 0.06, 0x7dd3fc, { plain: true }));
   scene.add(block(hx + 1.5, hy + 1.8, hz + 2.52, 0.9, 0.9, 0.06, 0x7dd3fc, { plain: true }));
 
-  // Limites de l'île (murs invisibles)
   const lim = HALF - 1;
   solids.push(
     { x0: -lim - 2, x1: -lim, y0: -10, y1: 40, z0: -lim, z1: lim },
@@ -304,7 +269,6 @@ export function startMonde({ onExit, hud, onStars }) {
   syncAvatar(P, 0);
   followCamera(P, 0, true);
 
-  // Les amis déjà trouvés arrivent autour du joueur
   let friendCount = 0;
   animals.forEach((a) => {
     if (!a.friend) return;
@@ -338,7 +302,6 @@ export function startMonde({ onExit, hud, onStars }) {
       stepPlayer(P, world, dt);
       if (P.pos.y < -5) { P.pos.set(startPos.x, startPos.y, startPos.z); P.vel.set(0, 0, 0); }
     }
-    // dans l'eau on avance moins vite
     P.speed = P.pos.y < WATER - 0.2 ? 3.5 : 6;
     syncAvatar(P, dt);
     followCamera(P, dt, false, world);
@@ -396,7 +359,6 @@ export function startMonde({ onExit, hud, onStars }) {
       let goal = null;
       let speed = 1.6;
       if (a.friend) {
-        // suit le joueur, chacun à sa place derrière lui
         const ang = P.facing + Math.PI + (a.slot - (friendCount - 1) / 2) * 0.55;
         tmp.set(px + Math.sin(ang) * (2 + a.slot * 0.3), 0, pz + Math.cos(ang) * (2 + a.slot * 0.3));
         if (Math.hypot(tmp.x - g.position.x, tmp.z - g.position.z) > 0.8) goal = tmp;
@@ -453,7 +415,7 @@ export function startMonde({ onExit, hud, onStars }) {
       const gh = Math.max(hAt(g.position.x, g.position.z), 0);
       g.position.y += (gh - g.position.y) * Math.min(1, 12 * dt);
       const sw = moving ? Math.sin(t * 12 + a.phase) * 0.5 : 0;
-      g.userData.legs.forEach((l, i) => { l.rotation.x = i % 3 === 0 ? sw : -sw; });
+      g.userData.legs.forEach((l, i) => { l.rotation.x = i === 0 || i === 3 ? sw : -sw; });
     });
   }
 

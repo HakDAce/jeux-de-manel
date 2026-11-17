@@ -8,10 +8,12 @@ button { font-family: inherit; cursor: pointer; }
 #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 900; color: #1e3a8a; z-index: 50; background: #9fdcff; }
 
 /* ---------- Commandes ---------- */
-#stick, #jumpBtn, #hud { display: none; }
+#stick, #jumpBtn, #hud, #camControls, #walkBuildBtns { display: none; }
 body.playing #hud { display: flex; }
 body.playing:not(.building) #stick, body.build-walking #stick { display: block; }
 body.playing:not(.building) #jumpBtn, body.build-walking #jumpBtn { display: flex; }
+body.building:not(.build-walking) #camControls { display: flex; }
+body.build-walking #walkBuildBtns { display: flex; }
 
 #stick {
   position: fixed; z-index: 4; pointer-events: none;
@@ -37,47 +39,92 @@ body.playing:not(.building) #jumpBtn, body.build-walking #jumpBtn { display: fle
 #jumpBtn span { font-size: 1rem; margin-top: -4px; }
 #jumpBtn.pressed { transform: translateY(5px); box-shadow: 0 2px 0 #15803d; }
 
+#walkBuildBtns {
+  position: fixed; z-index: 5; right: 24px; bottom: 168px;
+  gap: 8px;
+}
+#walkBuildBtns button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 62px; height: 62px; border-radius: 18px;
+  border: 3px solid #ffffff; background: rgba(255,255,255,0.92); color: #1e1b4b;
+  font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+}
+#walkBuildBtns button span { font-size: 0.68rem; }
+#walkBuildBtns button:active { transform: translateY(3px); }
+
+#camControls {
+  position: fixed; z-index: 6; right: 14px; top: 82px;
+  gap: 6px;
+}
+#camControls button {
+  width: 48px; height: 48px; border-radius: 16px;
+  border: 3px solid #ffffff; background: rgba(255,255,255,0.9); color: #1e1b4b;
+  font-size: 1.45rem; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.16);
+}
+#camControls button:active { transform: translateY(3px); }
+
 #hud {
   position: fixed; z-index: 6; top: 12px; left: 12px; right: 12px;
-  align-items: center; justify-content: space-between; pointer-events: none;
+  align-items: center; justify-content: space-between; pointer-events: none; gap: 8px;
+}
+.hud-left, .hud-right {
+  display: flex; align-items: center; gap: 8px; pointer-events: none;
 }
 #hud .round {
-  pointer-events: auto; width: 58px; height: 58px; border-radius: 50%;
-  border: 4px solid #ffffff; background: rgba(30,27,75,0.75); font-size: 1.7rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  pointer-events: auto; width: 54px; height: 54px; border-radius: 50%;
+  border: 4px solid #ffffff; background: rgba(30,27,75,0.78); color: #ffffff; font-size: 1.55rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
+#hud .round:active { transform: scale(0.93); }
+#hud .build-only, #hud .build-or-walk { display: none; }
+body.building:not(.build-walking) #hud .build-only { display: flex; }
+body.building #hud .build-or-walk { display: flex; }
+
 #hudText {
-  background: rgba(30,27,75,0.75); color: #ffffff; font-weight: 900; font-size: 1.25rem;
-  padding: 10px 20px; border-radius: 999px; border: 3px solid #fde047;
+  background: rgba(30,27,75,0.78); color: #ffffff; font-weight: 900; font-size: 1.15rem;
+  padding: 9px 18px; border-radius: 999px; border: 3px solid #fde047; white-space: nowrap;
 }
 
 /* ---------- Construction ---------- */
 #buildBar { display: none; }
 body.building #buildBar { display: flex; }
 #buildBar {
-  position: fixed; z-index: 6; left: 50%; bottom: 12px; transform: translateX(-50%);
-  flex-direction: column; gap: 8px; align-items: center; max-width: calc(100% - 16px);
+  position: fixed; z-index: 6; left: 50%; bottom: 10px; transform: translateX(-50%);
+  flex-direction: column; gap: 7px; align-items: center; max-width: calc(100% - 16px); width: max-content;
 }
-.bb-tools { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.bb-tools {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 100%;
+}
 .bb-tools button {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  min-width: 74px; padding: 7px 8px; border-radius: 16px;
-  border: 3px solid #ffffff; background: rgba(255,255,255,0.9); font-size: 1.6rem;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 66px; padding: 6px 7px; border-radius: 15px; flex-shrink: 0;
+  border: 3px solid #ffffff; background: rgba(255,255,255,0.92); font-size: 1.45rem;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.16);
 }
-.bb-tools button span { font-size: 0.8rem; font-weight: 900; color: #1e1b4b; }
+.bb-tools button span { font-size: 0.72rem; font-weight: 900; color: #1e1b4b; white-space: nowrap; }
 .bb-tools button.active { background: #fde047; border-color: #f59e0b; }
+.bb-tools button.on { background: #ddd6fe; border-color: #7c3aed; }
 .bb-tools .walk { background: #22c55e; }
 .bb-tools .walk span { color: #ffffff; }
 #buildPalette {
-  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
-  background: rgba(255,255,255,0.85); padding: 8px; border-radius: 20px;
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center;
+  background: rgba(255,255,255,0.9); padding: 7px 10px; border-radius: 20px;
+  max-width: min(860px, calc(100vw - 16px)); box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
-.bp-color { width: 44px; height: 44px; border-radius: 10px; border: 3px solid rgba(0,0,0,0.15); font-size: 1.3rem; padding: 0; }
+.bp-sep {
+  width: 2px; height: 32px; background: #cbd5e1; border-radius: 2px; margin: 0 2px; flex-shrink: 0;
+}
+.bp-color {
+  width: 40px; height: 40px; border-radius: 11px; border: 3px solid rgba(0,0,0,0.15);
+  font-size: 1.25rem; padding: 0; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; background: #f8fafc;
+}
 .bp-color.glass { background: linear-gradient(135deg, #e0f2fe, #bae6fd); }
-.bp-color.active { border: 4px solid #1e1b4b; transform: scale(1.12); }
+.bp-color.special { border-color: #c4b5fd; background: #f5f3ff; }
+.bp-color.active { border: 4px solid #1e1b4b; transform: scale(1.13); box-shadow: 0 0 0 2px #ffffff; }
 body.build-walking #buildPalette, body.build-walking .bb-tools button:not(.walk) { display: none; }
-body.build-walking #buildBar { left: auto; right: 12px; bottom: auto; top: 84px; transform: none; }
+body.build-walking #buildBar { left: auto; right: 12px; bottom: auto; top: 82px; transform: none; }
 
 /* ---------- Écrans de menu ---------- */
 .screen { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; padding: 16px; pointer-events: none; }
@@ -138,12 +185,32 @@ h2 { margin: 0; font-size: 1.7rem; color: #5b21b6; display: flex; align-items: c
 .hat.locked { background: #f3f4f6; color: #9ca3af; }
 .p-hint { margin: 0; color: #6b7280; font-weight: 700; font-size: 0.95rem; }
 
+/* ---------- Modales Modèles & 3 Mondes ---------- */
+.models-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 14px 0 18px;
+}
+.model-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px;
+  border-radius: 18px; border: 3px solid #c4b5fd; background: #f5f3ff; color: #4c1d95;
+  font-weight: 900; font-size: 0.95rem; box-shadow: 0 4px 0 #c4b5fd;
+}
+.model-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #c4b5fd; }
+.model-btn .m-emoji { font-size: 2.3rem; }
+
+.slots-list { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 18px; }
+.slot-card {
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;
+  border-radius: 18px; border: 3px solid #e5e7eb; background: #f9fafb; font-weight: 900;
+  color: #1e1b4b; font-size: 1.05rem;
+}
+.slot-card.active { border-color: #7c3aed; background: #ede9fe; color: #5b21b6; }
+
 /* ---------- Fenêtres ---------- */
 .modal { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; background: rgba(30,27,75,0.45); padding: 16px; }
 .modal.show { display: flex; }
 .modal-card {
   background: #ffffff; border-radius: 30px; border: 6px solid #fde047; padding: 24px 28px; text-align: center;
-  max-width: 520px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  max-width: 520px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.35); max-height: 90vh; overflow-y: auto;
   animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -170,18 +237,26 @@ h2 { margin: 0; font-size: 1.7rem; color: #5b21b6; display: flex; align-items: c
 #toast {
   position: fixed; z-index: 40; left: 50%; top: 84px; transform: translate(-50%, -10px);
   background: #1e1b4b; color: #ffffff; border: 3px solid #fde047; border-radius: 999px;
-  padding: 11px 22px; font-weight: 900; font-size: 1.1rem; text-align: center;
+  padding: 11px 22px; font-weight: 900; font-size: 1.05rem; text-align: center;
   max-width: calc(100% - 32px); opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s;
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+@media (max-width: 780px) {
+  #buildBar { width: calc(100% - 14px); }
+  .bb-tools { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; touch-action: pan-x; padding-bottom: 2px; }
+  #buildPalette { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; touch-action: pan-x; width: 100%; }
+}
+
 @media (max-width: 700px) and (orientation: portrait) {
   .screen { align-items: flex-end; }
   .panel { margin: 0 auto; max-height: 64%; }
-  #jumpBtn { width: 96px; height: 96px; right: 22px; bottom: 34px; }
-  #hudText { font-size: 1rem; padding: 8px 14px; }
+  #jumpBtn { width: 96px; height: 96px; right: 20px; bottom: 30px; }
+  #walkBuildBtns { right: 16px; bottom: 140px; }
+  #hud .round { width: 46px; height: 46px; font-size: 1.3rem; }
+  #hudText { font-size: 0.95rem; padding: 7px 12px; }
   .bp-color { width: 38px; height: 38px; }
-  .bb-tools button { min-width: 62px; font-size: 1.3rem; }
+  .bb-tools button { min-width: 58px; font-size: 1.25rem; }
 }
 @media (orientation: portrait) {
   .screen { align-items: flex-end; }

@@ -3,7 +3,7 @@
 // ============================================================================
 import {
   THREE, renderer, camera, newScene, block, save, persist, totalStars, makeAvatar,
-  sfx, speak, toast, input, readKeyboard, resetInput, showPlayControls, setSound, soundOn,
+  sfx, speak, toast, input, readKeyboard, resetInput, showPlayControls, setSound, isSoundOn,
   HATS, SHIRTS, PANTS, SKINS, ui, cloudBlocks
 } from './moteur.js';
 import { startParcours, LEVELS } from './parcours.js';
@@ -44,7 +44,6 @@ function makeMenuScene() {
       const wide = window.innerWidth > window.innerHeight;
       camera.position.set(wide ? -2.2 : 0, 2.2, 5.6);
       camera.lookAt(wide ? -2.2 : 0, 1.3, 0);
-      // personnage décalé à droite sur grand écran (le menu est à gauche)
       avatar.position.x = wide ? 0.4 : 0;
       avatar.position.z = wide ? 0 : -1.5;
       avatar.position.y = 0.5;
@@ -110,16 +109,19 @@ $('openPerso').addEventListener('click', () => { renderPerso(); showScreen('pers
 document.querySelectorAll('.back-menu').forEach((b) => b.addEventListener('click', () => { sfx('pop'); showScreen('menu'); }));
 $('homeBtn').addEventListener('pointerdown', (e) => {
   e.stopPropagation();
-  if (ui.busy && !document.querySelector('#celebrate.show')) return;
-  $('celebrate').classList.remove('show');
+  if (ui.busy && !document.querySelector('#celebrate.show, #modelsModal.show, #slotsModal.show')) return;
+  ['celebrate', 'modelsModal', 'slotsModal'].forEach((id) => {
+    const el = $(id);
+    if (el) el.classList.remove('show');
+  });
   ui.busy = false;
   showScreen('menu');
 });
 $('soundBtn').addEventListener('pointerdown', (e) => {
   e.stopPropagation();
-  setSound(!soundOn);
-  $('soundBtn').textContent = soundOn ? '🔊' : '🔇';
-  if (!soundOn && window.speechSynthesis) window.speechSynthesis.cancel();
+  setSound(!isSoundOn());
+  $('soundBtn').textContent = isSoundOn() ? '🔊' : '🔇';
+  if (!isSoundOn() && window.speechSynthesis) window.speechSynthesis.cancel();
 });
 
 // --- Choix du niveau ---
@@ -219,7 +221,6 @@ showScreen('menu');
 frame();
 document.getElementById('loading').remove();
 
-// Mode hors-ligne (le service worker de l'Atelier couvre aussi ce dossier)
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('../sw.js').catch(() => {}));
 }

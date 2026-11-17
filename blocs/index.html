@@ -15,14 +15,35 @@
   <div id="flash"></div>
   <div id="loading">🧱 Chargement du monde...</div>
 
-  <!-- Commandes de jeu -->
+  <!-- Commandes de jeu (mode promenade / parcours / petit monde) -->
   <div id="stick"><div id="stickKnob"></div></div>
   <button id="jumpBtn" aria-label="Sauter">⬆️<span>Saute</span></button>
 
+  <!-- Boutons rapides pour construire tout en se promenant -->
+  <div id="walkBuildBtns">
+    <button id="walkPlaceBtn" title="Poser un bloc devant moi">🧱<span>Poser</span></button>
+    <button id="walkBreakBtn" title="Enlever le bloc devant moi">⛏️<span>Casser</span></button>
+    <button id="walkRespawnBtn" title="Revenir à l'entrée">🚪<span>Entrée</span></button>
+  </div>
+
+  <!-- Contrôles rapides de caméra en mode construction -->
+  <div id="camControls">
+    <button id="camLeftBtn" title="Tourner à gauche">↺</button>
+    <button id="camCenterBtn" title="Recentrer la vue">🎯</button>
+    <button id="camRightBtn" title="Tourner à droite">↻</button>
+  </div>
+
   <div id="hud">
-    <button id="homeBtn" class="round" aria-label="Menu">🏠</button>
-    <div id="hudText"></div>
-    <button id="soundBtn" class="round" aria-label="Son">🔊</button>
+    <div class="hud-left">
+      <button id="homeBtn" class="round" aria-label="Menu">🏠</button>
+      <div id="hudText"></div>
+    </div>
+    <div class="hud-right">
+      <button id="buildSlotBtn" class="round build-only" title="Mes 3 Mondes">💾</button>
+      <button id="buildDayNightBtn" class="round build-or-walk" title="Jour / Nuit">☀️</button>
+      <button id="buildPhotoBtn" class="round build-or-walk" title="Prendre une photo pour Mon Album">📸</button>
+      <button id="soundBtn" class="round" aria-label="Son">🔊</button>
+    </div>
   </div>
 
   <!-- Barre de construction -->
@@ -31,8 +52,11 @@
       <button data-tool="place" class="active">🧱<span>Poser</span></button>
       <button data-tool="remove">⛏️<span>Enlever</span></button>
       <button data-tool="paint">🖌️<span>Peindre</span></button>
+      <button data-tool="pick">💧<span>Copier</span></button>
+      <button id="buildModeBtn">👆<span>1 bloc</span></button>
+      <button id="buildMirrorBtn">🪞<span>Miroir</span></button>
       <button id="buildUndo">↩️<span>Oups</span></button>
-      <button id="buildHouse">🏠<span>Maison</span></button>
+      <button id="buildModels">📐<span>Modèles</span></button>
       <button id="buildClear">🧹<span>Effacer</span></button>
       <button id="buildWalk" class="walk">🚶<span>Me promener</span></button>
     </div>
@@ -47,7 +71,7 @@
       <div class="star-total"></div>
       <button class="big-card c1" id="playParcours"><span class="bc-emoji">🏃</span><span class="bc-title">Parcours</span><span class="bc-sub">Saute jusqu’au drapeau !</span></button>
       <button class="big-card c2" id="playMonde"><span class="bc-emoji">🏝️</span><span class="bc-title">Petit monde</span><span class="bc-sub">Gemmes, coffres et animaux</span></button>
-      <button class="big-card c3" id="playBuild"><span class="bc-emoji">🏗️</span><span class="bc-title">Construction</span><span class="bc-sub">Construis ta maison</span></button>
+      <button class="big-card c3" id="playBuild"><span class="bc-emoji">🏗️</span><span class="bc-title">Construction</span><span class="bc-sub">Construis ton monde 3D</span></button>
       <button class="perso-btn" id="openPerso">👕 Mon perso</button>
     </div>
   </section>
@@ -74,6 +98,24 @@
       <p class="p-hint">Gagne des étoiles ⭐ (pièces, gemmes, coffres, niveaux) pour ouvrir les chapeaux.</p>
     </div>
   </section>
+
+  <!-- Choix de modèles de construction -->
+  <div id="modelsModal" class="modal">
+    <div class="modal-card">
+      <div class="q-title">📐 Choisis un modèle à décorer !</div>
+      <div class="models-grid" id="modelsGrid"></div>
+      <div class="c-buttons"><button id="modelsClose">Fermer</button></div>
+    </div>
+  </div>
+
+  <!-- Choix des 3 emplacements de sauvegarde -->
+  <div id="slotsModal" class="modal">
+    <div class="modal-card">
+      <div class="q-title">💾 Mes 3 Mondes</div>
+      <div class="slots-list" id="slotsList"></div>
+      <div class="c-buttons"><button id="slotsClose">Fermer</button></div>
+    </div>
+  </div>
 
   <!-- Question (porte, coffre) -->
   <div id="question" class="modal">
