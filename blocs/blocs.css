@@ -77,9 +77,39 @@ body.build-walking #walkBuildBtns { display: flex; }
   display: flex; align-items: center; justify-content: center;
 }
 #hud .round:active { transform: scale(0.93); }
-#hud .build-only, #hud .build-or-walk { display: none; }
+#hud .build-only, #hud .build-or-walk, #hud .monde-only { display: none; }
 body.building:not(.build-walking) #hud .build-only { display: flex; }
 body.building #hud .build-or-walk { display: flex; }
+body.monde-mode #hud .monde-only { display: flex; }
+body.monde-building #mondeBuildBtn { background: #fde047; color: #1e1b4b; border-color: #f59e0b; }
+
+/* ---------- Barre de construction dans Petit monde ---------- */
+#mondeBuildBar { display: none; }
+body.monde-building #mondeBuildBar { display: flex; }
+#mondeBuildBar {
+  position: fixed; z-index: 6; left: 50%; top: 74px; transform: translateX(-50%);
+  align-items: center; gap: 8px; max-width: calc(100vw - 20px);
+  background: rgba(255,255,255,0.92); padding: 6px 10px; border-radius: 20px;
+  border: 3px solid #ffffff; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+  overflow-x: auto; touch-action: pan-x;
+}
+.mb-tools, .mb-items {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.mb-sep {
+  width: 2px; height: 34px; background: #cbd5e1; border-radius: 2px; flex-shrink: 0;
+}
+#mondeBuildBar button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 56px; padding: 5px 7px; border-radius: 14px; flex-shrink: 0;
+  border: 2px solid #e5e7eb; background: #ffffff; font-size: 1.35rem;
+  box-shadow: 0 3px 0 #d1d5db;
+}
+#mondeBuildBar button span { font-size: 0.68rem; font-weight: 900; color: #1e1b4b; white-space: nowrap; }
+#mondeBuildBar button:active { transform: translateY(2px); }
+#mondeBuildBar button.active { background: #fde047; border-color: #f59e0b; box-shadow: 0 3px 0 #d97706; }
+#mondeBuildBar button.mb-color { border-width: 3px; }
+body.monde-building #toast { top: 150px; }
 
 #hudText {
   background: rgba(30,27,75,0.78); color: #ffffff; font-weight: 900; font-size: 1.15rem;
@@ -253,8 +283,8 @@ h2 { margin: 0; font-size: 1.7rem; color: #5b21b6; display: flex; align-items: c
   .panel { margin: 0 auto; max-height: 64%; }
   #jumpBtn { width: 96px; height: 96px; right: 20px; bottom: 30px; }
   #walkBuildBtns { right: 16px; bottom: 140px; }
-  #hud .round { width: 46px; height: 46px; font-size: 1.3rem; }
-  #hudText { font-size: 0.95rem; padding: 7px 12px; }
+  #hud .round { width: 44px; height: 44px; font-size: 1.25rem; }
+  #hudText { font-size: 0.85rem; padding: 6px 10px; }
   .bp-color { width: 38px; height: 38px; }
   .bb-tools button { min-width: 58px; font-size: 1.25rem; }
 }

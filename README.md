@@ -26,7 +26,7 @@ Une fois publié sur **GitHub Pages**, ouvrez le lien sur la tablette ou le tél
 Jeu 3D en blocs, ouvert depuis l'onglet « Monde de blocs » de l'Atelier.
 
 - 🏃 **Parcours** : 5 niveaux de sauts (plateformes qui bougent, trampolines, lave, portes magiques à calcul), pièces à ramasser, points de sauvegarde. Chaque niveau réussi ouvre le suivant.
-- 🏝️ **Petit monde** : une île à explorer, 12 gemmes, 3 coffres à calcul, 5 animaux qui deviennent amis et suivent le joueur.
+- 🏝️ **Petit monde** : grande île à explorer **et à modifier en jeu** (`128×128`), montagne enneigée avec trampolines, forêt aux champignons géants, vallée arc-en-ciel et îlot au trésor relié par un pont en bois. 24 gemmes, 6 coffres à calcul, 8 animaux amis (dont renard, panda et bébé dino), bouton `🧭 Indice` lumineux, retour `🏡` à la maison et bouton `🔨` pour poser/enlever arbres, palmiers, maisons visitables, barrières qui se connectent toutes seules, ponts sur l'eau, fleurs, champignons, trampolines, lampes et blocs colorés (sauvegarde automatique + `↩️ Oups`).
 - 🏗️ **Construction** :
   - Poser, enlever, peindre, copier une couleur (`💧`), prévisualisation fantôme du bloc avant de poser.
   - Modes rapides : `👆 1 bloc`, `〰️ Glisser` (tracer en continu), `🗼 Pile ×3`, et `🪞 Symétrie` (miroir automatique).

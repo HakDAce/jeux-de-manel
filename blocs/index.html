@@ -39,11 +39,26 @@
       <div id="hudText"></div>
     </div>
     <div class="hud-right">
+      <button id="mondeBuildBtn" class="round monde-only" title="Construire sur l'île">🔨</button>
+      <button id="mondeHintBtn" class="round monde-only" title="Voir où est un trésor">🧭</button>
+      <button id="mondeHomeBtn" class="round monde-only" title="Revenir à la maison">🏡</button>
       <button id="buildSlotBtn" class="round build-only" title="Mes 3 Mondes">💾</button>
       <button id="buildDayNightBtn" class="round build-or-walk" title="Jour / Nuit">☀️</button>
       <button id="buildPhotoBtn" class="round build-or-walk" title="Prendre une photo pour Mon Album">📸</button>
       <button id="soundBtn" class="round" aria-label="Son">🔊</button>
     </div>
+  </div>
+
+  <!-- Barre de construction rapide dans Petit monde -->
+  <div id="mondeBuildBar">
+    <div class="mb-tools">
+      <button data-mtool="place" class="active">✨<span>Poser</span></button>
+      <button data-mtool="remove">⛏️<span>Enlever</span></button>
+      <button id="mondeUndoBtn">↩️<span>Oups</span></button>
+      <button id="mondeResetBtn">🧹<span>Rétablir</span></button>
+    </div>
+    <div class="mb-sep"></div>
+    <div id="mondeItems" class="mb-items"></div>
   </div>
 
   <!-- Barre de construction -->
@@ -70,7 +85,7 @@
       <h1>🧱 Monde de blocs</h1>
       <div class="star-total"></div>
       <button class="big-card c1" id="playParcours"><span class="bc-emoji">🏃</span><span class="bc-title">Parcours</span><span class="bc-sub">Saute jusqu’au drapeau !</span></button>
-      <button class="big-card c2" id="playMonde"><span class="bc-emoji">🏝️</span><span class="bc-title">Petit monde</span><span class="bc-sub">Gemmes, coffres et animaux</span></button>
+      <button class="big-card c2" id="playMonde"><span class="bc-emoji">🏝️</span><span class="bc-title">Petit monde</span><span class="bc-sub">Grande île, trésors et animaux</span></button>
       <button class="big-card c3" id="playBuild"><span class="bc-emoji">🏗️</span><span class="bc-title">Construction</span><span class="bc-sub">Construis ton monde 3D</span></button>
       <button class="perso-btn" id="openPerso">👕 Mon perso</button>
     </div>

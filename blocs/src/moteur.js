@@ -164,6 +164,8 @@ export const save = (() => {
   data.gems = data.gems || [];
   data.friends = data.friends || [];
   data.chests = data.chests || [];
+  data.worldEdits = Array.isArray(data.worldEdits) ? data.worldEdits : [];
+  data.worldRemoved = Array.isArray(data.worldRemoved) ? data.worldRemoved : [];
   data.outfit = Object.assign({ shirt: '#3b82f6', pants: '#1e3a8a', skin: '#f5c9a0', hair: '#3f2a1d', hat: 'none' }, data.outfit || {});
   data.build = data.build || null;
   if (!Array.isArray(data.builds)) {
@@ -391,7 +393,10 @@ export const ANIMALS = [
   { id: 'mouton', name: 'Le mouton', body: 0xf8fafc, head: 0x374151, snout: 0x374151, size: 1.05 },
   { id: 'poule', name: 'La poule', body: 0xffffff, head: 0xffffff, snout: 0xf59e0b, size: 0.6, crest: 0xef4444 },
   { id: 'chien', name: 'Le chien', body: 0xb45309, head: 0xb45309, snout: 0x78350f, size: 0.85, ears: 0x78350f },
-  { id: 'lapin', name: 'Le lapin', body: 0xe5e7eb, head: 0xe5e7eb, snout: 0xf9a8d4, size: 0.6, bunny: true }
+  { id: 'lapin', name: 'Le lapin', body: 0xe5e7eb, head: 0xe5e7eb, snout: 0xf9a8d4, size: 0.6, bunny: true },
+  { id: 'renard', name: 'Le renard', body: 0xf97316, head: 0xf97316, snout: 0xfef3c7, size: 0.85, fox: true },
+  { id: 'panda', name: 'Le panda', body: 0xf8fafc, head: 0xf8fafc, snout: 0x111827, size: 1.1, panda: true },
+  { id: 'dino', name: 'Le bébé dino', body: 0x22c55e, head: 0x22c55e, snout: 0x86efac, size: 0.95, dino: true }
 ];
 
 export function makeAnimal(a) {
@@ -406,7 +411,8 @@ export function makeAnimal(a) {
     return m;
   };
   add(0.9, 0.7, 1.3, a.body, 0, 0.75, 0);
-  const legs = [[-0.3, 0.45], [0.3, 0.45], [-0.3, -0.45], [0.3, -0.45]].map(([x, z]) => add(0.22, 0.42, 0.22, a.head === 0xffffff ? 0xf59e0b : a.head, x, 0.21, z));
+  const legColor = a.panda ? 0x111827 : (a.head === 0xffffff ? 0xf59e0b : a.head);
+  const legs = [[-0.3, 0.45], [0.3, 0.45], [-0.3, -0.45], [0.3, -0.45]].map(([x, z]) => add(0.22, 0.42, 0.22, legColor, x, 0.21, z));
   add(0.7, 0.65, 0.6, a.head, 0, 1.15, 0.8);
   add(0.4, 0.26, 0.16, a.snout, 0, 1.02, 1.14);
   add(0.12, 0.12, 0.05, 0x111827, -0.18, 1.28, 1.11);
@@ -414,6 +420,24 @@ export function makeAnimal(a) {
   if (a.crest) add(0.12, 0.3, 0.4, a.crest, 0, 1.55, 0.8);
   if (a.ears) { add(0.14, 0.4, 0.2, a.ears, -0.38, 1.2, 0.8); add(0.14, 0.4, 0.2, a.ears, 0.38, 1.2, 0.8); }
   if (a.bunny) { add(0.14, 0.6, 0.12, a.head, -0.16, 1.7, 0.75); add(0.14, 0.6, 0.12, a.head, 0.16, 1.7, 0.75); }
+  if (a.fox) {
+    add(0.16, 0.24, 0.12, 0xf97316, -0.22, 1.56, 0.75);
+    add(0.16, 0.24, 0.12, 0xf97316, 0.22, 1.56, 0.75);
+    add(0.26, 0.26, 0.65, 0xf97316, 0, 0.78, -0.9);
+    add(0.26, 0.26, 0.22, 0xffffff, 0, 0.78, -1.25);
+  }
+  if (a.panda) {
+    add(0.2, 0.2, 0.1, 0x111827, -0.26, 1.52, 0.75);
+    add(0.2, 0.2, 0.1, 0x111827, 0.26, 1.52, 0.75);
+    add(0.22, 0.2, 0.06, 0x111827, -0.18, 1.26, 1.09);
+    add(0.22, 0.2, 0.06, 0x111827, 0.18, 1.26, 1.09);
+  }
+  if (a.dino) {
+    add(0.14, 0.24, 0.18, 0xfacc15, 0, 1.56, 0.8);
+    add(0.14, 0.24, 0.18, 0xfacc15, 0, 1.2, 0.1);
+    add(0.14, 0.24, 0.18, 0xfacc15, 0, 1.15, -0.35);
+    add(0.35, 0.3, 0.7, 0x22c55e, 0, 0.65, -0.95);
+  }
   g.userData.legs = legs;
   return g;
 }
@@ -729,8 +753,13 @@ function endPtr(e) {
     if (input.onDragEnd) input.onDragEnd();
     return;
   }
-  if (!p.moved && !p.hadPinch && !p.panning && input.scheme === 'orbit' && input.onTap && e.type === 'pointerup' && performance.now() - p.t0 < 1200) {
-    input.onTap(e.clientX, e.clientY);
+  if (!p.moved && !p.hadPinch && !p.panning && input.onTap && e.type === 'pointerup' && performance.now() - p.t0 < 1200) {
+    if (input.scheme === 'orbit') {
+      input.onTap(e.clientX, e.clientY);
+    } else if (input.scheme === 'play') {
+      const onStickRest = Math.hypot(e.clientX - 110, e.clientY - (window.innerHeight - 130)) < 75;
+      if (!onStickRest) input.onTap(e.clientX, e.clientY);
+    }
   }
 }
 touchLayer.addEventListener('pointerup', endPtr);
